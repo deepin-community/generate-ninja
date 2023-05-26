@@ -1,5 +1,98 @@
-template-repository (1.0-1) unstable; urgency=medium
+generate-ninja (0.0~git20221212.5e19d2f-1) unstable; urgency=medium
 
-  * Initial release
+  * Revup upstream.
+  * Update Standards-Version to 4.6.2.
+  * Fix trailing white-space.
+  * Update copyright.
 
- -- Tsic404 <liuheng@deepin.org>  Sat, 28 Jan 2023 13:46:49 +0800
+ -- Ricardo Ribalda Delgado <ricardo@ribalda.com>  Mon, 16 Jan 2023 12:40:16 +0100
+
+generate-ninja (0.0~git20220811.0bcd37b-1) unstable; urgency=medium
+
+  * Update Unbundling-version.git patch.
+  * Disable dwz (Closes: #1016330).
+  * Revup upstream.
+
+ -- Ricardo Ribalda Delgado <ricardo@ribalda.com>  Mon, 15 Aug 2022 09:56:34 +0200
+
+generate-ninja (0.0~git20220314.bd99dbf-1) unstable; urgency=medium
+
+  * Revup upstream.
+
+ -- Ricardo Ribalda Delgado <ricardo@ribalda.com>  Mon, 21 Mar 2022 07:51:44 +0100
+
+generate-ninja (0.0~git20220118.0725d78-1) unstable; urgency=medium
+
+  [ Ricardo Ribalda Delgado ]
+  * Revup upstream
+
+ -- Boyuan Yang <byang@debian.org>  Mon, 24 Jan 2022 15:57:21 -0500
+
+generate-ninja (0.0~git20210811.69ec4fc-1) unstable; urgency=medium
+
+  * Revup upstream
+  * Update debian-policy
+
+ -- Ricardo Ribalda Delgado <ricardo@ribalda.com>  Mon, 30 Aug 2021 10:24:30 +0200
+
+generate-ninja (0.0~git20210209.dfcbc6fe-1~exp1) experimental; urgency=medium
+
+  * debian/patches
+    + Remove patches after upstreaming them
+
+ -- qinxialei <xialeiqin@gmail.com>  Thu, 18 Feb 2021 11:11:23 +0800
+
+generate-ninja (0.0~git20210128.09c9e5e-1) unstable; urgency=medium
+
+  * Revup upstream.
+  * Build with g++ if clang is not available.
+  * Remove debian/patches after upstreaming them.
+  * Use /usr/share/dpkg/architecture.mk in debian/rules.
+  * Use DEB_VERSION_UPSTREAM instead of dpkg-parsechangelog --show-field Version
+
+ -- Ricardo Ribalda Delgado <ricardo@ribalda.com>  Thu, 28 Jan 2021 20:35:22 +0100
+
+generate-ninja (0.0~git20210126.94bda7c-1) unstable; urgency=medium
+
+  * Revup upstream.
+  * Refactor the package internal versioning.
+  * Fix build for all arches/ports.
+  * Fix Uploader name.
+
+ -- Ricardo Ribalda Delgado <ricardo@ribalda.com>  Wed, 27 Jan 2021 13:39:13 +0100
+
+generate-ninja (0.0~git20210126.5f30bbf-2) unstable; urgency=medium
+
+  * Add Ricardo as co-maintainer.
+  * Source-only rebuild.
+
+ -- qinxialei <xialeiqin@gmail.com>  Wed, 27 Jan 2021 17:34:33 +0800
+
+generate-ninja (0.0~git20210126.5f30bbf-1) unstable; urgency=medium
+
+  * Add watch file.
+  * Add gbp.conf.
+  * Add gitlab CI file.
+  * Get version from upstream tag instead of hardcoded value.
+  * Enable pie.
+  * Enable autopkgtest.
+  * Add myself as co-maintainer.
+  * Auto-generate manpage.
+
+ -- Ricardo Ribalda <ricardo@ribalda.com>  Tue, 26 Jan 2021 17:47:41 +0100
+
+generate-ninja (0.0~git20201124.53d9201-1.1) unstable; urgency=medium
+
+  * Non-maintainer upload.
+  * Source-only rebuild.
+  * debian/control: Bump Standards-Version to 4.5.1.
+  * debian/control: Add Vcs-* packaging repo.
+  * Let generate-ninja provides "gn" package.
+
+ -- Boyuan Yang <byang@debian.org>  Sat, 05 Dec 2020 20:19:00 -0500
+
+generate-ninja (0.0~git20201124.53d9201-1) unstable; urgency=medium
+
+  * Initial release (Closes: #974015)
+
+ -- qinxialei <xialeiqin@gmail.com>  Fri, 06 Nov 2020 11:33:44 +0800

@@ -1,0 +1,8 @@
+#!/bin/sh
+set -e
+
+cd examples/simple_build
+gn gen /tmp/out
+cd /tmp/out
+ninja
+./hello

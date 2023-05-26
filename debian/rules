@@ -1,4 +1,40 @@
 #!/usr/bin/make -f
+include /usr/share/dpkg/buildflags.mk
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+CXXFLAGS += $(CPPFLAGS) -fPIE
+LDFLAGS += -pie
+
+include /usr/share/dpkg/architecture.mk
+ifeq "$(DEB_HOST_ARCH)" "armel"
+LDFLAGS += -latomic
+endif
+
+#Needed by gn-describe when building outside git tree
+include /usr/share/dpkg/pkg-info.mk
+export DEB_VERSION_UPSTREAM
+
+#Fallback to c++ if clang is not available
+ifeq (, $(shell which clang++))
+export CXX = c++
+endif
 
 %:
-	dh $@
+	dh $@ --buildsystem=ninja --builddirectory=out
+
+override_dh_auto_configure:
+	python3 $(CURDIR)/build/gen.py
+
+override_dh_auto_test:
+ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
+	$(CURDIR)/out/gn_unittests
+endif
+
+override_dh_auto_install:
+	#noop
+
+override_dh_dwz:
+	#Clang-14 does not seem to play nice with dwz #1016563
+
+VERSION = $(shell out/gn --version)
+execute_before_dh_installdocs:
+	help2man --version-string="gn $(VERSION)" --name="Meta-build system that generates build files for Ninja" -N -o out/gn.1 out/gn
