@@ -1,0 +1,2 @@
+Tests: upstream-test-suite
+Depends: g++, generate-ninja, ninja-build
