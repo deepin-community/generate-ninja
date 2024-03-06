@@ -12,7 +12,7 @@ License: BSD-3-Clause
 
 Files: debian/*
 Copyright: 2020-2023 qinxialei <xialeiqin@gmail.com>
-           2013-2020 Ricardo Ribalda Delgado <ricardo@ribalda.com>
+           2013-2024 Ricardo Ribalda Delgado <ricardo@ribalda.com>
 License: BSD-3-Clause
 
 Files: infra/recipes.py

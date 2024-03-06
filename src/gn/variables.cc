@@ -526,7 +526,7 @@ const char kGenDeps_Help[] =
 
   Not all GN targets that get evaluated are actually turned into ninja targets
   (see "gn help execution"). If this target is generated, then any targets in
-  the "gen_deps" list will also be generated, regardless of the usual critera.
+  the "gen_deps" list will also be generated, regardless of the usual criteria.
 
   Since "gen_deps" are not build time dependencies, there can be cycles between
   "deps" and "gen_deps" or within "gen_deps" itself.
@@ -570,6 +570,21 @@ const char kArgs_Help[] =
            "{{source}}" ]
 
   See also "gn help action" and "gn help action_foreach".
+)";
+
+const char kMnemonic[] = "mnemonic";
+const char kMnemonic_HelpShort[] =
+    "mnemonic: [string] Prefix displayed when ninja runs this action.";
+const char kMnemonic_Help[] =
+    R"(mnemonic: [string] Prefix displayed when ninja runs this action.
+
+  Tools in GN can set their ninja "description" which is displayed when
+  building a target. These are commonly set with the format "CXX $output"
+  or "LINK $label". By default, all GN actions will have the description
+  "ACTION $label". Setting a mnemonic will override the "ACTION" prefix
+  with another string, but the label will still be unconditionally displayed.
+
+  Whitespace is not allowed within a mnemonic.
 )";
 
 const char kAssertNoDeps[] = "assert_no_deps";
@@ -743,6 +758,20 @@ const char kXcassetCompilerFlags_Help[] =
   in compile_xcassets tool.
 )";
 
+const char kTransparent[] = "transparent";
+const char kTransparent_HelpShort[] =
+    "transparent: [bool] True if the bundle is transparent.";
+const char kTransparent_Help[] =
+    R"(transparent: [bool] True if the bundle is transparent.
+
+  A boolean.
+
+  Valid for "create_bundle" target. If true, the "create_bundle" target will
+  not package the "bundle_data" deps but will forward them to all targets that
+  depends on it (unless the "bundle_data" target sets "product_type" to the
+  same value as the "create_bundle" target).
+)";
+
 const char kCflags[] = "cflags";
 const char kCflags_HelpShort[] =
     "cflags: [string list] Flags passed to all C compiler variants.";
@@ -759,8 +788,8 @@ const char kCommonCflagsHelp[] =
   versions of cflags* will be appended on the compiler command line after
   "cflags".
 
-  See also "asmflags" for flags for assembly-language files and "swiftflags"
-  for swift files.
+  See also "asmflags" for flags for assembly-language files, "swiftflags" for
+  swift files, and "rustflags" for Rust files.
 )" COMMON_ORDERING_HELP;
 const char* kCflags_Help = kCommonCflagsHelp;
 
@@ -1112,10 +1141,10 @@ Example
 
     # Locate the depfile in the output directory named like the
     # inputs but with a ".d" appended.
-    depfile = "$relative_target_output_dir/{{source_name}}.d"
+    depfile = "$target_gen_dir/{{source_name_part}}.d"
 
     # Say our script uses "-o <d file>" to indicate the depfile.
-    args = [ "{{source}}", "-o", depfile ]
+    args = [ "{{source}}", "-o", rebase_path(depfile, root_build_dir)]
   }
 )";
 
@@ -1147,6 +1176,10 @@ Details of dependency propagation
   of target type. all_dependent_configs are always propagated across all types
   of targets, and public_configs are always propagated across public deps of
   all types of targets.
+
+  For Rust targets, deps ensures that Rust code can refer to the dependency
+  target. If the dependency is a C/C++ target, the path to that target will
+  be made available to Rust for `#[link]` directives.
 
   Data dependencies are propagated differently. See "gn help data_deps" and
   "gn help runtime_deps".
@@ -1403,8 +1436,7 @@ const char kLibDirs_Help[] =
   Specifies additional directories passed to the linker for searching for the
   required libraries. If an item is not an absolute path, it will be treated as
   being relative to the current build file.
-)" COMMON_LIB_INHERITANCE_HELP COMMON_ORDERING_HELP
-        LIBS_AND_LIB_DIRS_ORDERING_HELP
+)" COMMON_LIB_INHERITANCE_HELP COMMON_ORDERING_HELP LIBS_AND_LIB_DIRS_ORDERING_HELP
     R"(
 Example
 
@@ -1752,15 +1784,18 @@ const char kPrecompiledSource_Help[] =
 
 const char kProductType[] = "product_type";
 const char kProductType_HelpShort[] =
-    "product_type: [string] Product type for Xcode projects.";
+    "product_type: [string] Product type for the bundle.";
 const char kProductType_Help[] =
-    R"(product_type: Product type for Xcode projects.
+    R"(product_type: [string] Product type for the bundle.
 
-  Correspond to the type of the product of a create_bundle target. Only
-  meaningful to Xcode (used as part of the Xcode project generation).
+  Valid for "create_bundle" and "bundle_data" targets.
 
-  When generating Xcode project files, only create_bundle target with a
-  non-empty product_type will have a corresponding target in Xcode project.
+  Correspond to the type of the bundle. Used by transparent "create_bundle"
+  target to control whether a "bundle_data" needs to be propagated or not.
+
+  When generating Xcode project, the product_type is propagated and only
+  "create_bundle" with a non-empty product_type will have a corresponding
+  target in the project.
 )";
 
 const char kPublic[] = "public";
@@ -2312,6 +2347,7 @@ const VariableInfoMap& GetTargetVariables() {
     INSERT_VARIABLE(BundleDepsFilter)
     INSERT_VARIABLE(BundleExecutableDir)
     INSERT_VARIABLE(XcassetCompilerFlags)
+    INSERT_VARIABLE(Transparent)
     INSERT_VARIABLE(Cflags)
     INSERT_VARIABLE(CflagsC)
     INSERT_VARIABLE(CflagsCC)
@@ -2330,6 +2366,7 @@ const VariableInfoMap& GetTargetVariables() {
     INSERT_VARIABLE(Defines)
     INSERT_VARIABLE(Depfile)
     INSERT_VARIABLE(Deps)
+    INSERT_VARIABLE(Mnemonic)
     INSERT_VARIABLE(Externs)
     INSERT_VARIABLE(Friend)
     INSERT_VARIABLE(FrameworkDirs)

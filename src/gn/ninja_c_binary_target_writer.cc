@@ -83,7 +83,9 @@ const SourceFile* GetModuleMapFromTargetSources(const Target* target) {
   return nullptr;
 }
 
-std::vector<ModuleDep> GetModuleDepsInformation(const Target* target) {
+std::vector<ModuleDep> GetModuleDepsInformation(
+    const Target* target,
+    const ResolvedTargetData& resolved) {
   std::vector<ModuleDep> ret;
 
   auto add = [&ret](const Target* t, bool is_self) {
@@ -107,10 +109,10 @@ std::vector<ModuleDep> GetModuleDepsInformation(const Target* target) {
     add(target, true);
   }
 
-  for (const auto& pair: target->GetDeps(Target::DEPS_LINKED)) {
+  for (const Target* dep : resolved.GetLinkedDeps(target)) {
     // Having a .modulemap source means that the dependency is modularized.
-    if (pair.ptr->source_types_used().Get(SourceFile::SOURCE_MODULEMAP)) {
-      add(pair.ptr, false);
+    if (dep->source_types_used().Get(SourceFile::SOURCE_MODULEMAP)) {
+      add(dep, false);
     }
   }
 
@@ -127,14 +129,15 @@ NinjaCBinaryTargetWriter::NinjaCBinaryTargetWriter(const Target* target,
 NinjaCBinaryTargetWriter::~NinjaCBinaryTargetWriter() = default;
 
 void NinjaCBinaryTargetWriter::Run() {
-  std::vector<ModuleDep> module_dep_info = GetModuleDepsInformation(target_);
+  std::vector<ModuleDep> module_dep_info =
+      GetModuleDepsInformation(target_, resolved());
 
   WriteCompilerVars(module_dep_info);
 
   size_t num_stamp_uses = target_->sources().size();
 
-  std::vector<OutputFile> input_deps = WriteInputsStampAndGetDep(
-      num_stamp_uses);
+  std::vector<OutputFile> input_deps =
+      WriteInputsStampAndGetDep(num_stamp_uses);
 
   // The input dependencies will be an order-only dependency. This will cause
   // Ninja to make sure the inputs are up to date before compiling this source,
@@ -246,8 +249,7 @@ void NinjaCBinaryTargetWriter::WriteModuleDepsSubstitution(
     const Substitution* substitution,
     const std::vector<ModuleDep>& module_dep_info,
     bool include_self) {
-  if (target_->toolchain()->substitution_bits().used.count(
-          substitution)) {
+  if (target_->toolchain()->substitution_bits().used.count(substitution)) {
     EscapeOptions options;
     options.mode = ESCAPE_NINJA_COMMAND;
 
@@ -561,7 +563,8 @@ void NinjaCBinaryTargetWriter::WriteSwiftSources(
     swift_order_only_deps.Append(order_only_deps.begin(),
                                  order_only_deps.end());
 
-    for (const Target* swiftmodule : target_->swift_values().modules())
+    for (const Target* swiftmodule :
+         resolved().GetSwiftModuleDependencies(target_))
       swift_order_only_deps.push_back(swiftmodule->dependency_output_file());
 
     WriteCompilerBuildLine(target_->sources(), input_deps,
@@ -578,6 +581,26 @@ void NinjaCBinaryTargetWriter::WriteSwiftSources(
   }
 
   out_ << std::endl;
+}
+
+void NinjaCBinaryTargetWriter::WriteSourceSetStamp(
+    const std::vector<OutputFile>& object_files) {
+  // The stamp rule for source sets is generally not used, since targets that
+  // depend on this will reference the object files directly. However, writing
+  // this rule allows the user to type the name of the target and get a build
+  // which can be convenient for development.
+  ClassifiedDeps classified_deps = GetClassifiedDeps();
+
+  // The classifier should never put extra object files in a source sets: any
+  // source sets that we depend on should appear in our non-linkable deps
+  // instead.
+  DCHECK(classified_deps.extra_object_files.empty());
+
+  std::vector<OutputFile> order_only_deps;
+  for (auto* dep : classified_deps.non_linkable_deps)
+    order_only_deps.push_back(dep->dependency_output_file());
+
+  WriteStampForTarget(object_files, order_only_deps);
 }
 
 void NinjaCBinaryTargetWriter::WriteLinkerStuff(
@@ -639,7 +662,7 @@ void NinjaCBinaryTargetWriter::WriteLinkerStuff(
   }
 
   // Libraries specified by paths.
-  for (const auto& lib : target_->all_libs()) {
+  for (const auto& lib : resolved().GetLinkedLibraries(target_)) {
     if (lib.is_source_file()) {
       implicit_deps.push_back(
           OutputFile(settings_->build_settings(), lib.source_file()));
@@ -665,7 +688,8 @@ void NinjaCBinaryTargetWriter::WriteLinkerStuff(
   // rlibs only depended on inside a shared library dependency).
   std::vector<OutputFile> transitive_rustlibs;
   if (target_->IsFinal()) {
-    for (const auto* dep : target_->inherited_libraries().GetOrdered()) {
+    for (const auto& inherited : resolved().GetInheritedLibraries(target_)) {
+      const Target* dep = inherited.target();
       if (dep->output_type() == Target::RUST_LIBRARY) {
         transitive_rustlibs.push_back(dep->dependency_output_file());
         implicit_deps.push_back(dep->dependency_output_file());

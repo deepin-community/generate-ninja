@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include <mutex>
+#include <thread>
+#include <unordered_map>
 
 #include "base/command_line.h"
 #include "base/strings/string_number_conversions.h"
@@ -72,11 +74,21 @@ const char kSwitchExportRustProject[] = "export-rust-project";
 struct TargetWriteInfo {
   std::mutex lock;
   NinjaWriter::PerToolchainRules rules;
+
+  using ResolvedMap = std::unordered_map<std::thread::id, ResolvedTargetData>;
+  std::unique_ptr<ResolvedMap> resolved_map = std::make_unique<ResolvedMap>();
+
+  void LeakOnPurpose() { (void)resolved_map.release(); }
 };
 
 // Called on worker thread to write the ninja file.
 void BackgroundDoWrite(TargetWriteInfo* write_info, const Target* target) {
-  std::string rule = NinjaTargetWriter::RunAndWriteFile(target);
+  ResolvedTargetData* resolved;
+  {
+    std::lock_guard<std::mutex> lock(write_info->lock);
+    resolved = &((*write_info->resolved_map)[std::this_thread::get_id()]);
+  }
+  std::string rule = NinjaTargetWriter::RunAndWriteFile(target, resolved);
   DCHECK(!rule.empty());
 
   {
@@ -433,14 +445,16 @@ bool RunNinjaPostProcessTools(const BuildSettings* build_settings,
   }
 
   // If we have a ninja version that supports restat, we should restat the
-  // build.ninja file so the next ninja invocation will use the right mtime. If
-  // gen is being invoked as part of a re-gen (ie, ninja is invoking gn gen),
-  // then we can elide this restat, as ninja will restat build.ninja anyways
-  // after it is complete.
+  // build.ninja or build.ninja.stamp files so the next ninja invocation
+  // will use the right mtimes. If gen is being invoked as part of a re-gen
+  // (ie, ninja is invoking gn gen), then we can elide this restat, as
+  // ninja will restat the appropriate file anyways after it is complete.
   if (!is_regeneration &&
       build_settings->ninja_required_version() >= Version{1, 10, 0}) {
     std::vector<base::FilePath> files_to_restat{
-        base::FilePath(FILE_PATH_LITERAL("build.ninja"))};
+        base::FilePath(FILE_PATH_LITERAL("build.ninja")),
+        base::FilePath(FILE_PATH_LITERAL("build.ninja.stamp")),
+    };
     if (!InvokeNinjaRestatTool(ninja_executable, build_dir, files_to_restat,
                                err)) {
       return false;
@@ -547,12 +561,12 @@ Xcode Flags
   --xcode-configs=<config_name_list>
       Configure the list of build configuration supported by the generated
       project. If specified, must be a list of semicolon-separated strings.
-      If ommitted, a single configuration will be used in the generated
+      If omitted, a single configuration will be used in the generated
       project derived from the build directory.
 
   --xcode-config-build-dir=<string>
       If present, must be a path relative to the source directory. It will
-      default to $root_out_dir if ommitted. The path is assumed to point to
+      default to $root_out_dir if omitted. The path is assumed to point to
       the directory where ninja needs to be invoked. This variable can be
       used to build for multiple configuration / platform / environment from
       the same generated Xcode project (assuming that the user has created a
@@ -569,7 +583,7 @@ Xcode Flags
 
   --xcode-additional-files-roots=<path_list>
       If present, must be a list of semicolon-separated paths. It will be used
-      as roots when looking for additional files to add. If ommitted, defaults
+      as roots when looking for additional files to add. If omitted, defaults
       to "//".
 
   --ninja-executable=<string>
@@ -710,6 +724,11 @@ int RunGen(const std::vector<std::string>& args) {
   if (!setup->Run())
     return 1;
 
+  if (command_line->HasSwitch(switches::kVerbose))
+    OutputString("Build graph constructed in " +
+                 base::Int64ToString(timer.Elapsed().InMilliseconds()) +
+                 "ms\n");
+
   // Sort the targets in each toolchain according to their label. This makes
   // the ninja files have deterministic content.
   for (auto& cur_toolchain : write_info.rules) {
@@ -781,6 +800,10 @@ int RunGen(const std::vector<std::string>& args) {
         "ms\n";
     OutputString(stats);
   }
+
+  // Just like the build graph, leak the resolved data to avoid expensive
+  // process teardown here too.
+  write_info.LeakOnPurpose();
 
   return 0;
 }

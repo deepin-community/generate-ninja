@@ -3,12 +3,10 @@ Section: utils
 Priority: optional
 Maintainer: qinxialei <xialeiqin@gmail.com>
 Uploaders: Ricardo Ribalda Delgado <ricardo@ribalda.com>
-Build-Depends: clang [linux-any],
-               debhelper-compat (= 13),
+Build-Depends: debhelper-compat (= 13),
                git,
-               help2man,
                ninja-build,
-               python3
+               python3-all:native
 Standards-Version: 4.6.2
 Homepage: https://gn.googlesource.com/gn/
 Vcs-Browser: https://salsa.debian.org/debian/gn
@@ -16,7 +14,7 @@ Vcs-Git: https://salsa.debian.org/debian/gn.git
 Rules-Requires-Root: no
 
 Package: generate-ninja
-Architecture: amd64 arm64 armel armhf i386 kfreebsd-amd64 kfreebsd-i386 mips64el mipsel ppc64 ppc64el riscv64 s390x
+Architecture: amd64 arm64 armel armhf i386 kfreebsd-amd64 kfreebsd-i386 loong64 mips64el mipsel ppc64 ppc64el riscv64 s390x
 Depends: ${misc:Depends}, ${shlibs:Depends}
 Provides: gn
 Description: meta-build system for ninja

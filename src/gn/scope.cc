@@ -259,6 +259,15 @@ bool Scope::CheckForUnusedVars(Err* err) const {
           "You set the variable \"" + std::string(pair.first) +
           "\" here and it was unused before it went\nout of scope.";
 
+      // Gather the template invocations that led up to this scope.
+      auto entries = GetTemplateInvocationEntries();
+      if (entries.size() != 0) {
+        help.append("\n\nVia these template invocations:\n");
+        for (const auto& entry : entries) {
+          help.append("  " + entry.Describe() + "\n");
+        }
+      }
+
       const BinaryOpNode* binary = pair.second.value.origin()->AsBinaryOp();
       if (binary && binary->op().type() == Token::EQUAL) {
         // Make a nicer error message for normal var sets.
@@ -572,7 +581,8 @@ void Scope::SetTemplateInvocationEntry(std::string template_name,
                               std::move(location)});
 }
 
-const Scope::TemplateInvocationEntry* Scope::FindTemplateInvocationEntry() const {
+const Scope::TemplateInvocationEntry* Scope::FindTemplateInvocationEntry()
+    const {
   if (template_invocation_entry_)
     return template_invocation_entry_.get();
   if (const Scope* scope = containing())
@@ -582,7 +592,6 @@ const Scope::TemplateInvocationEntry* Scope::FindTemplateInvocationEntry() const
 
 void Scope::AppendTemplateInvocationEntries(
     std::vector<TemplateInvocationEntry>* out) const {
-
   const Value* invoker = GetValue("invoker");
   if (invoker && invoker->type() == Value::SCOPE)
     invoker->scope_value()->AppendTemplateInvocationEntries(out);
