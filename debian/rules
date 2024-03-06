@@ -13,10 +13,11 @@ endif
 include /usr/share/dpkg/pkg-info.mk
 export DEB_VERSION_UPSTREAM
 
-#Fallback to c++ if clang is not available
-ifeq (, $(shell which clang++))
-export CXX = c++
-endif
+#gn uses clang if CXX is not set
+DPKG_EXPORT_BUILDFLAGS := 1
+include /usr/share/dpkg/architecture.mk
+export CXX = $(DEB_HOST_GNU_TYPE)-g++
+export AR = $(DEB_HOST_GNU_TYPE)-ar
 
 %:
 	dh $@ --buildsystem=ninja --builddirectory=out
@@ -31,10 +32,3 @@ endif
 
 override_dh_auto_install:
 	#noop
-
-override_dh_dwz:
-	#Clang-14 does not seem to play nice with dwz #1016563
-
-VERSION = $(shell out/gn --version)
-execute_before_dh_installdocs:
-	help2man --version-string="gn $(VERSION)" --name="Meta-build system that generates build files for Ninja" -N -o out/gn.1 out/gn
