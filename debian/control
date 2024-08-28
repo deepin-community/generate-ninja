@@ -2,12 +2,12 @@ Source: generate-ninja
 Section: utils
 Priority: optional
 Maintainer: qinxialei <xialeiqin@gmail.com>
-Uploaders: Ricardo Ribalda Delgado <ricardo@ribalda.com>
+Uploaders: Ricardo Ribalda Delgado <ribalda@debian.org>
 Build-Depends: debhelper-compat (= 13),
                git,
                ninja-build,
-               python3-all:native
-Standards-Version: 4.6.2
+               python3-all
+Standards-Version: 4.7.0
 Homepage: https://gn.googlesource.com/gn/
 Vcs-Browser: https://salsa.debian.org/debian/gn
 Vcs-Git: https://salsa.debian.org/debian/gn.git

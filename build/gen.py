@@ -101,7 +101,7 @@ class Platform(object):
     return self._platform == 'zos'
 
   def is_serenity(self):
-    return self_.platform == 'serenity'
+    return self._platform == 'serenity'
 
 class ArgumentsList:
   """Helper class to accumulate ArgumentParser argument definitions
@@ -229,12 +229,23 @@ def main(argv):
   return 0
 
 
+def is_gcc(cxx):
+  """Return True iff the compiler at `cxx` is GCC based."""
+  ret = subprocess.run(
+      f'{cxx} -dM -E -',
+      shell=True,
+      stdin=subprocess.DEVNULL,
+      text=True,
+      capture_output=True)
+
+  return ret.returncode == 0 and "#define __GNUC__" in ret.stdout and not "#define __clang__" in ret.stdout
+
 def GenerateLastCommitPosition(host, header):
   ROOT_TAG = 'initial-commit'
   describe_output = subprocess.check_output(
       ['git', 'describe', 'HEAD', '--abbrev=12', '--match', ROOT_TAG],
       shell=host.is_windows(), cwd=REPO_ROOT)
-  mo = re.match(ROOT_TAG + '-(\d+)-g([0-9a-f]+)', describe_output.decode())
+  mo = re.match(ROOT_TAG + r'-(\d+)-g([0-9a-f]+)', describe_output.decode())
   if not mo:
     raise ValueError(
         'Unexpected output from git describe when generating version header')
@@ -306,7 +317,12 @@ def WriteGenericNinja(path, static_libraries, executables,
 
   if platform.is_windows():
     executable_ext = '.exe'
-    library_ext = '.lib'
+
+    if platform.is_msvc():
+      library_ext = '.lib'
+    else:
+      library_ext = '.a'
+
     object_ext = '.obj'
   else:
     executable_ext = ''
@@ -480,11 +496,13 @@ def WriteGNNinja(path, platform, host, options, args_list):
         '-std=c++20'
     ])
 
-    # flags not supported by gcc/g++.
-    if cxx == 'clang++':
-      cflags.extend(['-Wrange-loop-analysis', '-Wextra-semi-stmt'])
-    else:
+    if is_gcc(cxx):
       cflags.append('-Wno-redundant-move')
+      # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=104336
+      cflags.append('-Wno-restrict')
+    # flags not supported by gcc/g++.
+    else:
+      cflags.extend(['-Wrange-loop-analysis', '-Wextra-semi-stmt'])
 
     if platform.is_linux() or platform.is_mingw() or platform.is_msys():
       ldflags.append('-Wl,--as-needed')
@@ -492,21 +510,16 @@ def WriteGNNinja(path, platform, host, options, args_list):
       if not options.no_static_libstdcpp:
         ldflags.append('-static-libstdc++')
 
-      if platform.is_mingw() or platform.is_msys():
-        cflags.remove('-std=c++20')
-        cflags.extend([
-          '-Wno-deprecated-copy',
-          '-Wno-implicit-fallthrough',
-          '-Wno-redundant-move',
-          '-Wno-unused-variable',
-          '-Wno-format',             # Use of %llx, which is supported by _UCRT, false positive
-          '-Wno-strict-aliasing',    # Dereferencing punned pointer
-          '-Wno-cast-function-type', # Casting FARPROC to RegDeleteKeyExPtr
-          '-std=gnu++20',
-        ])
-      else:
-        # This is needed by libc++.
-        libs.append('-ldl')
+      cflags.extend([
+        '-Wno-deprecated-copy',
+        '-Wno-implicit-fallthrough',
+        '-Wno-redundant-move',
+        '-Wno-unused-variable',
+        '-Wno-format',             # Use of %llx, which is supported by _UCRT, false positive
+        '-Wno-strict-aliasing',    # Dereferencing punned pointer
+        '-Wno-cast-function-type', # Casting FARPROC to RegDeleteKeyExPtr
+      ])
+
     elif platform.is_darwin():
       min_mac_version_flag = '-mmacosx-version-min=10.9'
       cflags.append(min_mac_version_flag)
@@ -664,11 +677,13 @@ def WriteGNNinja(path, platform, host, options, args_list):
         'src/gn/frameworks_utils.cc',
         'src/gn/function_exec_script.cc',
         'src/gn/function_filter.cc',
+        'src/gn/function_filter_labels.cc',
         'src/gn/function_foreach.cc',
         'src/gn/function_forward_variables_from.cc',
         'src/gn/function_get_label_info.cc',
         'src/gn/function_get_path_info.cc',
         'src/gn/function_get_target_outputs.cc',
+        'src/gn/function_label_matches.cc',
         'src/gn/function_process_file_template.cc',
         'src/gn/function_read_file.cc',
         'src/gn/function_rebase_path.cc',
@@ -706,6 +721,7 @@ def WriteGNNinja(path, platform, host, options, args_list):
         'src/gn/ninja_create_bundle_target_writer.cc',
         'src/gn/ninja_generated_file_target_writer.cc',
         'src/gn/ninja_group_target_writer.cc',
+        'src/gn/ninja_outputs_writer.cc',
         'src/gn/ninja_rust_binary_target_writer.cc',
         'src/gn/ninja_target_command_util.cc',
         'src/gn/ninja_target_writer.cc',
@@ -784,8 +800,9 @@ def WriteGNNinja(path, platform, host, options, args_list):
         'src/gn/action_target_generator_unittest.cc',
         'src/gn/analyzer_unittest.cc',
         'src/gn/args_unittest.cc',
-        'src/gn/builder_unittest.cc',
         'src/gn/builder_record_map_unittest.cc',
+        'src/gn/builder_unittest.cc',
+        'src/gn/bundle_data_unittest.cc',
         'src/gn/c_include_iterator_unittest.cc',
         'src/gn/command_format_unittest.cc',
         'src/gn/commands_unittest.cc',
@@ -798,11 +815,13 @@ def WriteGNNinja(path, platform, host, options, args_list):
         'src/gn/file_writer_unittest.cc',
         'src/gn/frameworks_utils_unittest.cc',
         'src/gn/function_filter_unittest.cc',
+        'src/gn/function_filter_labels_unittest.cc',
         'src/gn/function_foreach_unittest.cc',
         'src/gn/function_forward_variables_from_unittest.cc',
         'src/gn/function_get_label_info_unittest.cc',
         'src/gn/function_get_path_info_unittest.cc',
         'src/gn/function_get_target_outputs_unittest.cc',
+        'src/gn/function_label_matches_unittest.cc',
         'src/gn/function_process_file_template_unittest.cc',
         'src/gn/function_rebase_path_unittest.cc',
         'src/gn/function_template_unittest.cc',
@@ -831,6 +850,7 @@ def WriteGNNinja(path, platform, host, options, args_list):
         'src/gn/ninja_create_bundle_target_writer_unittest.cc',
         'src/gn/ninja_generated_file_target_writer_unittest.cc',
         'src/gn/ninja_group_target_writer_unittest.cc',
+        'src/gn/ninja_outputs_writer_unittest.cc',
         'src/gn/ninja_rust_binary_target_writer_unittest.cc',
         'src/gn/ninja_target_command_util_unittest.cc',
         'src/gn/ninja_target_writer_unittest.cc',

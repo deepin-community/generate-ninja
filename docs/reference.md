@@ -43,6 +43,8 @@
     *   [exec_script: Synchronously run a script and return the output.](#func_exec_script)
     *   [filter_exclude: Remove values that match a set of patterns.](#func_filter_exclude)
     *   [filter_include: Remove values that do not match a set of patterns.](#func_filter_include)
+    *   [filter_labels_exclude: Remove labels that match a set of patterns.](#func_filter_labels_exclude)
+    *   [filter_labels_include: Remove labels that do not match a set of patterns.](#func_filter_labels_include)
     *   [foreach: Iterate over a list.](#func_foreach)
     *   [forward_variables_from: Copies variables from a different scope.](#func_forward_variables_from)
     *   [get_label_info: Get an attribute from a target's label.](#func_get_label_info)
@@ -50,6 +52,7 @@
     *   [get_target_outputs: [file list] Get the list of outputs from a target.](#func_get_target_outputs)
     *   [getenv: Get an environment variable.](#func_getenv)
     *   [import: Import a file into the current scope.](#func_import)
+    *   [label_matches: Returns whether a label matches any of a list of patterns.](#func_label_matches)
     *   [not_needed: Mark variables from scope as not needed.](#func_not_needed)
     *   [pool: Defines a pool object.](#func_pool)
     *   [print: Prints to the console.](#func_print)
@@ -105,10 +108,10 @@
     *   [cflags_objc: [string list] Flags passed to the Objective C compiler.](#var_cflags_objc)
     *   [cflags_objcc: [string list] Flags passed to the Objective C++ compiler.](#var_cflags_objcc)
     *   [check_includes: [boolean] Controls whether a target's files are checked.](#var_check_includes)
-    *   [code_signing_args: [string list] Arguments passed to code signing script.](#var_code_signing_args)
-    *   [code_signing_outputs: [file list] Output files for code signing step.](#var_code_signing_outputs)
-    *   [code_signing_script: [file name] Script for code signing.](#var_code_signing_script)
-    *   [code_signing_sources: [file list] Sources for code signing step.](#var_code_signing_sources)
+    *   [code_signing_args: [string list] [deprecated] Args for the post-processing script.](#var_code_signing_args)
+    *   [code_signing_outputs: [file list] [deprecated] Outputs of the post-processing step.](#var_code_signing_outputs)
+    *   [code_signing_script: [file name] [deprecated] Script for the post-processing step.](#var_code_signing_script)
+    *   [code_signing_sources: [file list] [deprecated] Sources for the post-processing step.](#var_code_signing_sources)
     *   [complete_static_lib: [boolean] Links all deps into a static library.](#var_complete_static_lib)
     *   [configs: [label list] Configs applying to this target or config.](#var_configs)
     *   [contents: Contents to write to file.](#var_contents)
@@ -142,6 +145,10 @@
     *   [outputs: [file list] Output files for actions and copy targets.](#var_outputs)
     *   [partial_info_plist: [filename] Path plist from asset catalog compiler.](#var_partial_info_plist)
     *   [pool: [string] Label of the pool used by binary targets and actions.](#var_pool)
+    *   [post_processing_args: [string list] Args for the post-processing script.](#var_post_processing_args)
+    *   [post_processing_outputs: [file list] Outputs of the post-processing step.](#var_post_processing_outputs)
+    *   [post_processing_script: [file name] Script for the post-processing step.](#var_post_processing_script)
+    *   [post_processing_sources: [file list] Sources for the post-processing step.](#var_post_processing_sources)
     *   [precompiled_header: [string] Header file to precompile.](#var_precompiled_header)
     *   [precompiled_header_type: [string] "gcc" or "msvc".](#var_precompiled_header_type)
     *   [precompiled_source: [file name] Source file to precompile.](#var_precompiled_source)
@@ -184,7 +191,7 @@
 
 ## <a name="commands"></a>Commands
 
-### <a name="cmd_analyze"></a>**gn analyze &lt;out_dir&gt; &lt;input_path&gt; &lt;output_path&gt;**
+### <a name="cmd_analyze"></a>**gn analyze &lt;out_dir&gt; &lt;input_path&gt; &lt;output_path&gt;**&nbsp;[Back to Top](#gn-reference)
 
 ```
   Analyze which targets are affected by a list of files.
@@ -260,7 +267,7 @@
   tries really hard to always write something to the output JSON and convey
   errors that way rather than via return codes.
 ```
-### <a name="cmd_args"></a>**gn args**: (command-line tool)
+### <a name="cmd_args"></a>**gn args**: (command-line tool)&nbsp;[Back to Top](#gn-reference)
 
 ```
   Display or configure arguments declared by the build.
@@ -349,7 +356,7 @@
     given arguments set (which may affect the values of other
     arguments).
 ```
-### <a name="cmd_check"></a>**gn check &lt;out_dir&gt; [&lt;label_pattern&gt;] [\--force] [\--check-generated]**
+### <a name="cmd_check"></a>**gn check &lt;out_dir&gt; [&lt;label_pattern&gt;] [\--force] [\--check-generated]**&nbsp;[Back to Top](#gn-reference)
 
 ```
   GN's include header checker validates that the includes for C-like source
@@ -487,13 +494,13 @@
   gn check out/Default "//foo/*
       Check only the files in targets in the //foo directory tree.
 ```
-### <a name="cmd_clean"></a>**gn clean &lt;out_dir&gt;...**
+### <a name="cmd_clean"></a>**gn clean &lt;out_dir&gt;...**&nbsp;[Back to Top](#gn-reference)
 
 ```
   Deletes the contents of the output directory except for args.gn and
   creates a Ninja build environment sufficient to regenerate the build.
 ```
-### <a name="cmd_clean_stale"></a>**gn clean_stale [\--ninja-executable=...] &lt;out_dir&gt;...**
+### <a name="cmd_clean_stale"></a>**gn clean_stale [\--ninja-executable=...] &lt;out_dir&gt;...**&nbsp;[Back to Top](#gn-reference)
 
 ```
   Removes the no longer needed output files from the build directory and prunes
@@ -511,7 +518,7 @@
   --ninja-executable=<string>
       Can be used to specify the ninja executable to use.
 ```
-### <a name="cmd_desc"></a>**gn desc**
+### <a name="cmd_desc"></a>**gn desc**&nbsp;[Back to Top](#gn-reference)
 
 ```
   gn desc <out_dir> <label or pattern> [<what to show>] [--blame]
@@ -683,7 +690,7 @@
       Shows defines set for the //base:base target, annotated by where
       each one was set from.
 ```
-### <a name="cmd_format"></a>**gn format [\--dump-tree] (\--stdin | &lt;list of build_files...&gt;)**
+### <a name="cmd_format"></a>**gn format [\--dump-tree] (\--stdin | &lt;list of build_files...&gt;)**&nbsp;[Back to Top](#gn-reference)
 
 ```
   Formats .gn file to a standard format.
@@ -732,7 +739,7 @@
   gn format --stdin
   gn format --read-tree=json //rewritten/BUILD.gn
 ```
-### <a name="cmd_gen"></a>**gn gen [\--check] [&lt;ide options&gt;] &lt;out_dir&gt;**
+### <a name="cmd_gen"></a>**gn gen [\--check] [&lt;ide options&gt;] &lt;out_dir&gt;**&nbsp;[Back to Top](#gn-reference)
 
 ```
   Generates ninja files from the current tree and puts them in the given output
@@ -910,7 +917,35 @@
       generated JSON file will be first argument when invoking script.
 
   --json-ide-script-args=<argument>
-      Optional second argument that will passed to executed script.
+      Optional second argument that will be passed to executed script.
+```
+
+#### **Ninja Outputs**
+
+```
+  The --ninja-outputs-file=<FILE> option dumps a JSON file that maps GN labels
+  to their Ninja output paths. This can be later processed to build an index
+  to convert between Ninja targets and GN ones before or after the build itself.
+  It looks like:
+
+    {
+      "label1": [
+        "path1",
+        "path2"
+      ],
+      "label2": [
+        "path3"
+      ]
+    }
+
+  --ninja-outputs-script=<path_to_python_script>
+    Executes python script after the outputs file is generated or updated
+    with new content. Path can be project absolute (//), system absolute (/) or
+    relative, in which case the output directory will be base. Path to
+    generated file will be first argument when invoking script.
+
+  --ninja-outputs-script-args=<argument>
+    Optional second argument that will be passed to executed script.
 ```
 
 #### **Compilation Database**
@@ -954,7 +989,7 @@
       and not match:
        - "//foo:bar"
 ```
-### <a name="cmd_help"></a>**gn help &lt;anything&gt;**
+### <a name="cmd_help"></a>**gn help &lt;anything&gt;**&nbsp;[Back to Top](#gn-reference)
 
 ```
   Yo dawg, I heard you like help on your help so I put help on the help in the
@@ -976,7 +1011,7 @@
   gn help --markdown all
       Dump all help to stdout in markdown format.
 ```
-### <a name="cmd_ls"></a>**gn ls &lt;out_dir&gt; [&lt;label_pattern&gt;] [\--default-toolchain] [\--as=...]**
+### <a name="cmd_ls"></a>**gn ls &lt;out_dir&gt; [&lt;label_pattern&gt;] [\--default-toolchain] [\--as=...]**&nbsp;[Back to Top](#gn-reference)
 ```
       [--type=...] [--testonly=...]
 
@@ -1044,7 +1079,7 @@
   gn ls out/Debug "//base/*" --as=output | xargs ninja -C out/Debug
       Builds all targets in //base and all subdirectories.
 ```
-### <a name="cmd_meta"></a>**gn meta**
+### <a name="cmd_meta"></a>**gn meta**&nbsp;[Back to Top](#gn-reference)
 
 ```
   gn meta <out_dir> <target>* --data=<key>[,<key>*]* [--walk=<key>[,<key>*]*]
@@ -1102,7 +1137,7 @@
       target and all of its dependency tree, rebasing the strings in the `files`
       key onto the source directory of the target's declaration relative to "/".
 ```
-### <a name="cmd_outputs"></a>**gn outputs &lt;out_dir&gt; &lt;list of target or file names...&gt;**
+### <a name="cmd_outputs"></a>**gn outputs &lt;out_dir&gt; &lt;list of target or file names...&gt;**&nbsp;[Back to Top](#gn-reference)
 
 ```
   Lists the output files corresponding to the given target(s) or file name(s).
@@ -1156,7 +1191,7 @@
   git diff --name-only | xargs gn outputs out/x64 | xargs ninja -C out/x64
       Compiles all files changed in git.
 ```
-### <a name="cmd_path"></a>**gn path &lt;out_dir&gt; &lt;target_one&gt; &lt;target_two&gt;**
+### <a name="cmd_path"></a>**gn path &lt;out_dir&gt; &lt;target_one&gt; &lt;target_two&gt;**&nbsp;[Back to Top](#gn-reference)
 
 ```
   Finds paths of dependencies between two targets. Each unique path will be
@@ -1201,7 +1236,7 @@
 ```
   gn path out/Default //base //gn
 ```
-### <a name="cmd_refs"></a>**gn refs**
+### <a name="cmd_refs"></a>**gn refs**&nbsp;[Back to Top](#gn-reference)
 
 ```
   gn refs <out_dir> (<label_pattern>|<label>|<file>|@<response_file>)* [--all]
@@ -1291,7 +1326,7 @@
   gn refs out/Debug //gn:gn
       Find all targets depending on the given exact target name.
 
-  gn refs out/Debug //base:i18n --as=buildfiles | xargs gvim
+  gn refs out/Debug //base:i18n --as=buildfile | xargs gvim
       Edit all .gn files containing references to //base:i18n
 
   gn refs out/Debug //base --all
@@ -1330,7 +1365,7 @@
 ```
 ## <a name="targets"></a>Target declarations
 
-### <a name="func_action"></a>**action**: Declare a target that runs a script a single time.
+### <a name="func_action"></a>**action**: Declare a target that runs a script a single time.&nbsp;[Back to Top](#gn-reference)
 
 ```
   This target type allows you to run a script a single time to produce one or
@@ -1442,7 +1477,7 @@
            rebase_path(sources, root_build_dir)
   }
 ```
-### <a name="func_action_foreach"></a>**action_foreach**: Declare a target that runs a script over a set of files.
+### <a name="func_action_foreach"></a>**action_foreach**: Declare a target that runs a script over a set of files.&nbsp;[Back to Top](#gn-reference)
 
 ```
   This target type allows you to run a script once-per-file over a set of
@@ -1557,7 +1592,7 @@
         "/{{source_name_part}}.h" ]
   }
 ```
-### <a name="func_bundle_data"></a>**bundle_data**: [iOS/macOS] Declare a target without output.
+### <a name="func_bundle_data"></a>**bundle_data**: [iOS/macOS] Declare a target without output.&nbsp;[Back to Top](#gn-reference)
 
 ```
   This target type allows one to declare data that is required at runtime. It is
@@ -1571,6 +1606,11 @@
   This target can be used on all platforms though it is designed only to
   generate iOS/macOS bundle. In cross-platform projects, it is advised to put it
   behind iOS/macOS conditionals.
+
+  If any source files in a bundle_data target match `*/*.xcassets/*` then they
+  will be considered part of an assets catalog, and instead of being copied to
+  the final bundle the assets catalog itself will be added to the inputs of the
+  assets catalog compilation step. See "compile_xcassets" tool.
 
   See "gn help create_bundle" for more information.
 ```
@@ -1617,7 +1657,7 @@
     ]
   }
 ```
-### <a name="func_copy"></a>**copy**: Declare a target that copies files.
+### <a name="func_copy"></a>**copy**: Declare a target that copies files.&nbsp;[Back to Top](#gn-reference)
 
 #### **File name handling**
 
@@ -1689,7 +1729,7 @@
     deps = [ "//src/tools/melon" ]
   }
 ```
-### <a name="func_create_bundle"></a>**create_bundle**: [ios/macOS] Build an iOS or macOS bundle.
+### <a name="func_create_bundle"></a>**create_bundle**: [ios/macOS] Build an iOS or macOS bundle.&nbsp;[Back to Top](#gn-reference)
 
 ```
   This target generates an iOS or macOS bundle (which is a directory with a
@@ -1712,22 +1752,30 @@
   data_deps, however.
 ```
 
-#### **Code signing**
+#### **Post-processing**
 
 ```
-  Some bundle needs to be code signed as part of the build (on iOS all
-  application needs to be code signed to run on a device). The code signature
-  can be configured via the code_signing_script variable.
+  Some bundle needs to be post-processed as part of the build (e.g. on iOS all
+  application needs to be code signed to run on a device). The post processing
+  step can be configured via the post_processing_script variable.
 
-  If set, code_signing_script is the path of a script that invoked after all
-  files have been moved into the bundle. The script must not change any file in
-  the bundle, but may add new files.
+  If set, `post_processing_script` is the path of a script that invoked after
+  all files have been moved into the bundle. The script must not change any file
+  in the bundle, but may add new files.
 
-  If code_signing_script is defined, then code_signing_outputs must also be
-  defined and non-empty to inform when the script needs to be re-run. The
-  code_signing_args will be passed as is to the script (so path have to be
-  rebased) and additional inputs may be listed with the variable
-  code_signing_sources.
+  If `post_processing_script` is defined, then `post_processing_outputs` must
+  be defined and non-empty to inform when the script needs to be re-run. The
+  `post_processing_args` will be passed as is to the script (so path have to be
+  rebased) and additional inputs may be listed via `post_processing_sources`.
+```
+
+#### **Migration**
+
+```
+  The post-processing step used to be limited to code-signing. The properties
+  used to be named `code_signing_$name` instead of `post_processing_$name`. The
+  old names are still accepted as alias to facilitate migration but a warning
+  will be emitted and the alias eventually be removed.
 ```
 
 #### **Variables**
@@ -1741,9 +1789,10 @@
            visibility
   Bundle vars: bundle_root_dir, bundle_contents_dir, bundle_resources_dir,
                bundle_executable_dir, bundle_deps_filter, product_type,
-               code_signing_args, code_signing_script, code_signing_sources,
-               code_signing_outputs, xcode_extra_attributes,
-               xcode_test_application_name, partial_info_plist
+               post_processing_args, post_processing_script,
+               post_processing_sources, post_processing_outputs,
+               xcode_extra_attributes, xcode_test_application_name,
+               partial_info_plist
 ```
 
 #### **Example**
@@ -1817,19 +1866,19 @@
         deps = [ ":${app_name}_bundle_info_plist" ]
         if (is_ios && code_signing) {
           deps += [ ":${app_name}_generate_executable" ]
-          code_signing_script = "//build/config/ios/codesign.py"
-          code_signing_sources = [
+          post_processing_script = "//build/config/ios/codesign.py"
+          post_processing_sources = [
             invoker.entitlements_path,
             "$target_gen_dir/$app_name",
           ]
-          code_signing_outputs = [
+          post_processing_outputs = [
             "$bundle_root_dir/$app_name",
             "$bundle_root_dir/_CodeSignature/CodeResources",
             "$bundle_root_dir/embedded.mobileprovision",
             "$target_gen_dir/$app_name.xcent",
           ]
-          code_signing_args = [
-            "-i=" + ios_code_signing_identity,
+          post_processing_args = [
+            "-i=" + ios_post_processing_identity,
             "-b=" + rebase_path(
                 "$target_gen_dir/$app_name", root_build_dir),
             "-e=" + rebase_path(
@@ -1845,7 +1894,7 @@
     }
   }
 ```
-### <a name="func_executable"></a>**executable**: Declare an executable target.
+### <a name="func_executable"></a>**executable**: Declare an executable target.&nbsp;[Back to Top](#gn-reference)
 
 #### **Language and compilation**
 
@@ -1872,7 +1921,7 @@
            visibility
   Rust variables: aliased_deps, crate_root, crate_name
 ```
-### <a name="func_generated_file"></a>**generated_file**: Declare a generated_file target.
+### <a name="func_generated_file"></a>**generated_file**: Declare a generated_file target.&nbsp;[Back to Top](#gn-reference)
 
 ```
   Writes data value(s) to disk on resolution. This target type mirrors some
@@ -2005,7 +2054,7 @@
       "../base/foo.cpp",  // from //base:a
     ]
 ```
-### <a name="func_group"></a>**group**: Declare a named group of targets.
+### <a name="func_group"></a>**group**: Declare a named group of targets.&nbsp;[Back to Top](#gn-reference)
 
 ```
   This target type allows you to create meta-targets that just collect a set of
@@ -2034,7 +2083,7 @@
     ]
   }
 ```
-### <a name="func_loadable_module"></a>**loadable_module**: Declare a loadable module target.
+### <a name="func_loadable_module"></a>**loadable_module**: Declare a loadable module target.&nbsp;[Back to Top](#gn-reference)
 
 ```
   This target type allows you to create an object file that is (and can only
@@ -2071,7 +2120,7 @@
            visibility
   Rust variables: aliased_deps, crate_root, crate_name, crate_type
 ```
-### <a name="func_rust_library"></a>**rust_library**: Declare a Rust library target.
+### <a name="func_rust_library"></a>**rust_library**: Declare a Rust library target.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A Rust library is an archive containing additional rust-c provided metadata.
@@ -2104,7 +2153,7 @@
            visibility
   Rust variables: aliased_deps, crate_root, crate_name
 ```
-### <a name="func_rust_proc_macro"></a>**rust_proc_macro**: Declare a Rust procedural macro target.
+### <a name="func_rust_proc_macro"></a>**rust_proc_macro**: Declare a Rust procedural macro target.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A Rust procedural macro allows creating syntax extensions as execution of a
@@ -2140,7 +2189,7 @@
            visibility
   Rust variables: aliased_deps, crate_root, crate_name
 ```
-### <a name="func_shared_library"></a>**shared_library**: Declare a shared library target.
+### <a name="func_shared_library"></a>**shared_library**: Declare a shared library target.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A shared library will be specified on the linker line for targets listing the
@@ -2175,7 +2224,7 @@
            visibility
   Rust variables: aliased_deps, crate_root, crate_name, crate_type
 ```
-### <a name="func_source_set"></a>**source_set**: Declare a source set target.
+### <a name="func_source_set"></a>**source_set**: Declare a source set target.&nbsp;[Back to Top](#gn-reference)
 
 ```
   Only C-language source sets are supported at the moment.
@@ -2220,7 +2269,7 @@
            output_extension, output_name, public, sources, testonly,
            visibility
 ```
-### <a name="func_static_library"></a>**static_library**: Declare a static library target.
+### <a name="func_static_library"></a>**static_library**: Declare a static library target.&nbsp;[Back to Top](#gn-reference)
 
 ```
   Make a ".a" / ".lib" file.
@@ -2252,7 +2301,7 @@
   target containing both C and C++ sources is acceptable, but a
   target containing C and Rust sources is not).
 ```
-### <a name="func_target"></a>**target**: Declare a target with the given programmatic type.
+### <a name="func_target"></a>**target**: Declare a target with the given programmatic type.&nbsp;[Back to Top](#gn-reference)
 
 ```
   target(target_type_string, target_name_string) { ... }
@@ -2300,7 +2349,7 @@
 ```
 ## <a name="functions"></a>Buildfile functions
 
-### <a name="func_assert"></a>**assert**: Assert an expression is true at generation time.
+### <a name="func_assert"></a>**assert**: Assert an expression is true at generation time.&nbsp;[Back to Top](#gn-reference)
 
 ```
   assert(<condition> [, <error string>])
@@ -2316,7 +2365,7 @@
   assert(is_win)
   assert(defined(sources), "Sources must be defined");
 ```
-### <a name="func_config"></a>**config**: Defines a configuration object.
+### <a name="func_config"></a>**config**: Defines a configuration object.&nbsp;[Back to Top](#gn-reference)
 
 ```
   Configuration objects can be applied to targets and specify sets of compiler
@@ -2384,7 +2433,7 @@
     configs = [ ":myconfig" ]
   }
 ```
-### <a name="func_declare_args"></a>**declare_args**: Declare build arguments.
+### <a name="func_declare_args"></a>**declare_args**: Declare build arguments.&nbsp;[Back to Top](#gn-reference)
 
 ```
   Introduces the given arguments into the current scope. If they are not
@@ -2445,7 +2494,7 @@
   This also sets the teleporter, but it's already defaulted to on so it will
   have no effect.
 ```
-### <a name="func_defined"></a>**defined**: Returns whether an identifier is defined.
+### <a name="func_defined"></a>**defined**: Returns whether an identifier is defined.&nbsp;[Back to Top](#gn-reference)
 
 ```
   Returns true if the given argument is defined. This is most useful in
@@ -2486,7 +2535,7 @@
     }
   }
 ```
-### <a name="func_exec_script"></a>**exec_script**: Synchronously run a script and return the output.
+### <a name="func_exec_script"></a>**exec_script**: Synchronously run a script and return the output.&nbsp;[Back to Top](#gn-reference)
 
 ```
   exec_script(filename,
@@ -2546,7 +2595,7 @@
   # result.
   exec_script("//foo/bar/myscript.py")
 ```
-### <a name="func_filter_exclude"></a>**filter_exclude**: Remove values that match a set of patterns.
+### <a name="func_filter_exclude"></a>**filter_exclude**: Remove values that match a set of patterns.&nbsp;[Back to Top](#gn-reference)
 
 ```
   filter_exclude(values, exclude_patterns)
@@ -2564,7 +2613,7 @@
   result = filter_exclude(values, [ "*.proto" ])
   # result will be [ "foo.cc", "foo.h" ]
 ```
-### <a name="func_filter_include"></a>**filter_include**: Remove values that do not match a set of patterns.
+### <a name="func_filter_include"></a>**filter_include**: Remove values that do not match a set of patterns.&nbsp;[Back to Top](#gn-reference)
 
 ```
   filter_include(values, include_patterns)
@@ -2582,7 +2631,43 @@
   result = filter_include(values, [ "*.proto" ])
   # result will be [ "foo.proto" ]
 ```
-### <a name="func_foreach"></a>**foreach**: Iterate over a list.
+### <a name="func_filter_labels_exclude"></a>**filter_labels_exclude**: Remove labels that match a set of patterns.&nbsp;[Back to Top](#gn-reference)
+
+```
+  filter_labels_exclude(labels, exclude_patterns)
+
+  The argument labels must be a list of strings.
+
+  The argument exclude_patterns must be a list of label patterns (see
+  "gn help label_pattern"). Only elements from labels matching at least
+  one of the patterns will be excluded.
+```
+
+#### **Examples**
+```
+  labels = [ "//foo:baz", "//foo/bar:baz", "//bar:baz" ]
+  result = filter_labels_exclude(labels, [ "//foo:*" ])
+  # result will be [ "//foo/bar:baz", "//bar:baz" ]
+```
+### <a name="func_filter_labels_include"></a>**filter_labels_include**: Remove labels that do not match a set of patterns.&nbsp;[Back to Top](#gn-reference)
+
+```
+  filter_labels_include(labels, include_patterns)
+
+  The argument labels must be a list of strings.
+
+  The argument include_patterns must be a list of label patterns (see
+  "gn help label_pattern"). Only elements from labels matching at least
+  one of the patterns will be included.
+```
+
+#### **Examples**
+```
+  labels = [ "//foo:baz", "//foo/bar:baz", "//bar:baz" ]
+  result = filter_labels_include(labels, [ "//foo:*" ])
+  # result will be [ "//foo:baz" ]
+```
+### <a name="func_foreach"></a>**foreach**: Iterate over a list.&nbsp;[Back to Top](#gn-reference)
 
 ```
     foreach(<loop_var>, <list>) {
@@ -2616,7 +2701,7 @@
   b
   c
 ```
-### <a name="func_forward_variables_from"></a>**forward_variables_from**: Copies variables from a different scope.
+### <a name="func_forward_variables_from"></a>**forward_variables_from**: Copies variables from a different scope.&nbsp;[Back to Top](#gn-reference)
 
 ```
   forward_variables_from(from_scope, variable_list_or_star,
@@ -2694,7 +2779,7 @@
     }
   }
 ```
-### <a name="func_get_label_info"></a>**get_label_info**: Get an attribute from a target's label.
+### <a name="func_get_label_info"></a>**get_label_info**: Get an attribute from a target's label.&nbsp;[Back to Top](#gn-reference)
 
 ```
   get_label_info(target_label, what)
@@ -2758,7 +2843,7 @@
   get_label_info("//foo/bar:baz", "target_gen_dir")
   # Returns string "//out/Debug/gen/foo/bar".
 ```
-### <a name="func_get_path_info"></a>**get_path_info**: Extract parts of a file or directory name.
+### <a name="func_get_path_info"></a>**get_path_info**: Extract parts of a file or directory name.&nbsp;[Back to Top](#gn-reference)
 
 ```
   get_path_info(input, what)
@@ -2838,7 +2923,7 @@
   # Extract the source-absolute directory name,
   result = get_path_info(get_path_info(path, "dir"), "abspath")
 ```
-### <a name="func_get_target_outputs"></a>**get_target_outputs**: [file list] Get the list of outputs from a target.
+### <a name="func_get_target_outputs"></a>**get_target_outputs**: [file list] Get the list of outputs from a target.&nbsp;[Back to Top](#gn-reference)
 
 ```
   get_target_outputs(target_label)
@@ -2889,7 +2974,7 @@
     sources = get_target_outputs(":my_action")
   }
 ```
-### <a name="func_getenv"></a>**getenv**: Get an environment variable.
+### <a name="func_getenv"></a>**getenv**: Get an environment variable.&nbsp;[Back to Top](#gn-reference)
 
 ```
   value = getenv(env_var_name)
@@ -2909,7 +2994,7 @@
 ```
   home_dir = getenv("HOME")
 ```
-### <a name="func_import"></a>**import**: Import a file into the current scope.
+### <a name="func_import"></a>**import**: Import a file into the current scope.&nbsp;[Back to Top](#gn-reference)
 
 ```
   The import command loads the rules and variables resulting from executing the
@@ -2944,7 +3029,22 @@
   # Looks in the current directory.
   import("my_vars.gni")
 ```
-### <a name="func_not_needed"></a>**not_needed**: Mark variables from scope as not needed.
+### <a name="func_label_matches"></a>**label_matches**: Returns true if the label matches any of a set of patterns.&nbsp;[Back to Top](#gn-reference)
+
+```
+  label_matches(target_label, patterns)
+
+  The argument patterns must be a list of label patterns (see
+  "gn help label_pattern"). If the target_label matches any of the patterns,
+  the function returns the value true.
+```
+
+#### **Examples**
+```
+  result = label_matches("//baz:bar", [ "//foo/bar/*", "//baz:*" ])
+  # result will be true
+```
+### <a name="func_not_needed"></a>**not_needed**: Mark variables from scope as not needed.&nbsp;[Back to Top](#gn-reference)
 
 ```
   not_needed(variable_list_or_star, variable_to_ignore_list = [])
@@ -2965,7 +3065,7 @@
   not_needed(invoker, "*", [ "config" ])
   not_needed(invoker, [ "data_deps", "deps" ])
 ```
-### <a name="func_pool"></a>**pool**: Defines a pool object.
+### <a name="func_pool"></a>**pool**: Defines a pool object.&nbsp;[Back to Top](#gn-reference)
 
 ```
   Pool objects can be applied to a tool to limit the parallelism of the
@@ -3009,7 +3109,7 @@
     }
   }
 ```
-### <a name="func_print"></a>**print**: Prints to the console.
+### <a name="func_print"></a>**print**: Prints to the console.&nbsp;[Back to Top](#gn-reference)
 
 ```
   Prints all arguments to the console separated by spaces. A newline is
@@ -3029,7 +3129,7 @@
 
   print(sources, deps)
 ```
-### <a name="func_print_stack_trace"></a>**print_stack_trace**: Prints a stack trace.
+### <a name="func_print_stack_trace"></a>**print_stack_trace**: Prints a stack trace.&nbsp;[Back to Top](#gn-reference)
 
 ```
   Prints the current file location, and all template invocations that led up to
@@ -3058,7 +3158,7 @@
     foo("lala.foo")  //BUILD.gn:5
     print_stack_trace()  //BUILD.gn:2
 ```
-### <a name="func_process_file_template"></a>**process_file_template**: Do template expansion over a list of files.
+### <a name="func_process_file_template"></a>**process_file_template**: Do template expansion over a list of files.&nbsp;[Back to Top](#gn-reference)
 
 ```
   process_file_template(source_list, template)
@@ -3103,7 +3203,7 @@
       "//out/Debug/bar.cc"
       "//out/Debug/bar.h" ]
 ```
-### <a name="func_read_file"></a>**read_file**: Read a file into a variable.
+### <a name="func_read_file"></a>**read_file**: Read a file into a variable.&nbsp;[Back to Top](#gn-reference)
 
 ```
   read_file(filename, input_conversion)
@@ -3127,7 +3227,7 @@
 ```
   lines = read_file("foo.txt", "list lines")
 ```
-### <a name="func_rebase_path"></a>**rebase_path**: Rebase a file or directory to another location.
+### <a name="func_rebase_path"></a>**rebase_path**: Rebase a file or directory to another location.&nbsp;[Back to Top](#gn-reference)
 
 ```
   converted = rebase_path(input,
@@ -3223,7 +3323,7 @@
     ] + rebase_path(sources, root_build_dir)
   }
 ```
-### <a name="func_set_default_toolchain"></a>**set_default_toolchain**: Sets the default toolchain name.
+### <a name="func_set_default_toolchain"></a>**set_default_toolchain**: Sets the default toolchain name.&nbsp;[Back to Top](#gn-reference)
 
 ```
   set_default_toolchain(toolchain_label)
@@ -3263,7 +3363,7 @@
     set_default_toolchain("//toolchains:32")
   }
 ```
-### <a name="func_set_defaults"></a>**set_defaults**: Set default values for a target type.
+### <a name="func_set_defaults"></a>**set_defaults**: Set default values for a target type.&nbsp;[Back to Top](#gn-reference)
 
 ```
   set_defaults(<target_type_name>) { <values...> }
@@ -3297,7 +3397,7 @@
     configs -= [ "//tools/mything:settings" ]
   }
 ```
-### <a name="func_split_list"></a>**split_list**: Splits a list into N different sub-lists.
+### <a name="func_split_list"></a>**split_list**: Splits a list into N different sub-lists.&nbsp;[Back to Top](#gn-reference)
 
 ```
   result = split_list(input, n)
@@ -3320,7 +3420,7 @@
   Will print:
     [[1, 2], [3, 4], [5, 6]
 ```
-### <a name="func_string_join"></a>**string_join**: Concatenates a list of strings with a separator.
+### <a name="func_string_join"></a>**string_join**: Concatenates a list of strings with a separator.&nbsp;[Back to Top](#gn-reference)
 
 ```
   result = string_join(separator, strings)
@@ -3336,7 +3436,7 @@
     string_join(", ", ["a", "b", "c"])  --> "a, b, c"
     string_join("s", ["", ""])          --> "s"
 ```
-### <a name="func_string_replace"></a>**string_replace**: Replaces substring in the given string.
+### <a name="func_string_replace"></a>**string_replace**: Replaces substring in the given string.&nbsp;[Back to Top](#gn-reference)
 
 ```
   result = string_replace(str, old, new[, max])
@@ -3357,7 +3457,7 @@
   Will print:
     Hello, GN!
 ```
-### <a name="func_string_split"></a>**string_split**: Split string into a list of strings.
+### <a name="func_string_split"></a>**string_split**: Split string into a list of strings.&nbsp;[Back to Top](#gn-reference)
 
 ```
   result = string_split(str[, sep])
@@ -3384,7 +3484,7 @@
   string_split("  a b  ", " ")    --> ["", "", "a", "b", "", ""]
   string_split("aa+-bb+-c", "+-") --> ["aa", "bb", "c"]
 ```
-### <a name="func_template"></a>**template**: Define a template rule.
+### <a name="func_template"></a>**template**: Define a template rule.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A template defines a custom name that acts like a function. It provides a way
@@ -3547,7 +3647,7 @@
     deps = [ ":foo_idl_files" ]
   }
 ```
-### <a name="func_tool"></a>**tool**: Specify arguments to a toolchain tool.
+### <a name="func_tool"></a>**tool**: Specify arguments to a toolchain tool.&nbsp;[Back to Top](#gn-reference)
 
 #### **Usage**
 
@@ -3726,6 +3826,20 @@
         would be
           "-Wl,-add_ast_path,obj/foo/Foo.swiftmodule"
 
+    rust_swiftmodule_switch [string, optional, link tools only]
+        Valid for: Linker tools except "alink"
+
+        Like swiftmodule_switch, but for targets built/linked with the Rust
+        compiler. The string will be prependend to the path to the
+        .swiftmodule files that are embedded in the linker output.
+
+        If you specified:
+          rust_swiftmodule_swift = "-Clink-arg=-Wl,-add_ast_path,"
+        then the "{{swiftmodules}}" expansion for
+          [ "obj/foo/Foo.swiftmodule" ]
+        would be
+          "-Clink-arg=-Wl,-add_ast_path,obj/foo/Foo.swiftmodule"
+
     outputs  [list of strings with substitutions]
         Valid for: Linker and compiler tools (required)
 
@@ -3776,13 +3890,13 @@
 
     link_output  [string with substitutions]
     depend_output  [string with substitutions]
-        Valid for: "solink" only (optional)
+        Valid for: "solink", "rust_dylib" or "rust_cdylib" only (optional)
 
-        These two files specify which of the outputs from the solink tool
-        should be used for linking and dependency tracking. These should match
-        entries in the "outputs". If unspecified, the first item in the
-        "outputs" array will be used for all. See "Separate linking and
-        dependencies for shared libraries" below for more.
+        These two files specify which of the outputs from the tool should
+        be used for linking and dependency tracking. These should match entries
+        in the "outputs". If unspecified, the first item in the "outputs" array
+        will be used for all. See "Separate linking and dependencies for shared
+        libraries" below for more.
 
         On Windows, where the tools produce a .dll shared library and a .lib
         import library, you will want the first two to be the import library
@@ -4028,8 +4142,8 @@
     {{solibs}}
         Extra libraries from shared library dependencies not specified in the
         {{inputs}}. This is the list of link_output files from shared libraries
-        (if the solink tool specifies a "link_output" variable separate from
-        the "depend_output").
+        (if the solink, rust_dylib and rust_cdylib tools specify a "link_output"
+        variable separate from the "depend_output").
 
         These should generally be treated the same as libs by your tool.
 
@@ -4092,6 +4206,10 @@
     {{xcasset_compiler_flags}}
         Expands to the list of flags specified in corresponding
         create_bundle target.
+
+  The inputs for compile_xcassets tool will be found from the bundle_data
+  dependencies by looking for any file matching "*/*.xcassets/*" pattern.
+  The "$assets.xcassets" directory will be added as input to the tool.
 
   The Swift tool has multiple input and outputs. It must have exactly one
   output of .swiftmodule type, but can have one or more object file outputs,
@@ -4188,7 +4306,7 @@
     }
   };
 ```
-### <a name="func_toolchain"></a>**toolchain**: Defines a toolchain.
+### <a name="func_toolchain"></a>**toolchain**: Defines a toolchain.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A toolchain is a set of commands and build flags used to compile the source
@@ -4342,7 +4460,7 @@
       }
     }
 ```
-### <a name="func_write_file"></a>**write_file**: Write a file to disk.
+### <a name="func_write_file"></a>**write_file**: Write a file to disk.&nbsp;[Back to Top](#gn-reference)
 
 ```
   write_file(filename, data, output_conversion = "")
@@ -4373,7 +4491,7 @@
 ```
 ## <a name="predefined_variables"></a>Built-in predefined variables
 
-### <a name="var_current_cpu"></a>**current_cpu**: The processor architecture of the current toolchain.
+### <a name="var_current_cpu"></a>**current_cpu**: The processor architecture of the current toolchain.&nbsp;[Back to Top](#gn-reference)
 
 ```
   The build configuration usually sets this value based on the value of
@@ -4387,7 +4505,7 @@
 
   See "gn help target_cpu" for a list of common values returned.
 ```
-### <a name="var_current_os"></a>**current_os**: The operating system of the current toolchain.
+### <a name="var_current_os"></a>**current_os**: The operating system of the current toolchain.&nbsp;[Back to Top](#gn-reference)
 
 ```
   The build configuration usually sets this value based on the value of
@@ -4401,7 +4519,7 @@
 
   See "gn help target_os" for a list of common values returned.
 ```
-### <a name="var_current_toolchain"></a>**current_toolchain**: Label of the current toolchain.
+### <a name="var_current_toolchain"></a>**current_toolchain**: Label of the current toolchain.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A fully-qualified label representing the current toolchain. You can use this
@@ -4416,13 +4534,13 @@
     executable("output_thats_64_bit_only") {
       ...
 ```
-### <a name="var_default_toolchain"></a>**default_toolchain**: [string] Label of the default toolchain.
+### <a name="var_default_toolchain"></a>**default_toolchain**: [string] Label of the default toolchain.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A fully-qualified label representing the default toolchain, which may not
   necessarily be the current one (see "current_toolchain").
 ```
-### <a name="var_gn_version"></a>**gn_version**: [number] The version of gn.
+### <a name="var_gn_version"></a>**gn_version**: [number] The version of gn.&nbsp;[Back to Top](#gn-reference)
 
 ```
   Corresponds to the number printed by `gn --version`.
@@ -4433,7 +4551,7 @@
 ```
   assert(gn_version >= 1700, "need GN version 1700 for the frobulate feature")
 ```
-### <a name="var_host_cpu"></a>**host_cpu**: The processor architecture that GN is running on.
+### <a name="var_host_cpu"></a>**host_cpu**: The processor architecture that GN is running on.&nbsp;[Back to Top](#gn-reference)
 
 ```
   This is value is exposed so that cross-compile toolchains can access the host
@@ -4451,7 +4569,7 @@
   - "x64"
   - "x86"
 ```
-### <a name="var_host_os"></a>**host_os**: [string] The operating system that GN is running on.
+### <a name="var_host_os"></a>**host_os**: [string] The operating system that GN is running on.&nbsp;[Back to Top](#gn-reference)
 
 ```
   This value is exposed so that cross-compiles can access the host build
@@ -4468,7 +4586,7 @@
   - "mac"
   - "win"
 ```
-### <a name="var_invoker"></a>**invoker**: [string] The invoking scope inside a template.
+### <a name="var_invoker"></a>**invoker**: [string] The invoking scope inside a template.&nbsp;[Back to Top](#gn-reference)
 
 ```
   Inside a template invocation, this variable refers to the scope of the
@@ -4499,14 +4617,14 @@
     bar = 123
   }
 ```
-### <a name="var_python_path"></a>**python_path**: Absolute path of Python.
+### <a name="var_python_path"></a>**python_path**: Absolute path of Python.&nbsp;[Back to Top](#gn-reference)
 
 ```
   Normally used in toolchain definitions if running some command requires
   Python. You will normally not need this when invoking scripts since GN
   automatically finds it for you.
 ```
-### <a name="var_root_build_dir"></a>**root_build_dir**: [string] Directory where build commands are run.
+### <a name="var_root_build_dir"></a>**root_build_dir**: [string] Directory where build commands are run.&nbsp;[Back to Top](#gn-reference)
 
 ```
   This is the root build output directory which will be the current directory
@@ -4515,7 +4633,7 @@
   Most often this is used with rebase_path (see "gn help rebase_path") to
   convert arguments to be relative to a script's current directory.
 ```
-### <a name="var_root_gen_dir"></a>**root_gen_dir**: Directory for the toolchain's generated files.
+### <a name="var_root_gen_dir"></a>**root_gen_dir**: Directory for the toolchain's generated files.&nbsp;[Back to Top](#gn-reference)
 
 ```
   Absolute path to the root of the generated output directory tree for the
@@ -4530,7 +4648,7 @@
   See also "target_gen_dir" which is usually a better location for generated
   files. It will be inside the root generated dir.
 ```
-### <a name="var_root_out_dir"></a>**root_out_dir**: [string] Root directory for toolchain output files.
+### <a name="var_root_out_dir"></a>**root_out_dir**: [string] Root directory for toolchain output files.&nbsp;[Back to Top](#gn-reference)
 
 ```
   Absolute path to the root of the output directory tree for the current
@@ -4556,7 +4674,7 @@
     args = [ "-o", rebase_path(root_out_dir, root_build_dir) ]
   }
 ```
-### <a name="var_target_cpu"></a>**target_cpu**: The desired cpu architecture for the build.
+### <a name="var_target_cpu"></a>**target_cpu**: The desired cpu architecture for the build.&nbsp;[Back to Top](#gn-reference)
 
 ```
   This value should be used to indicate the desired architecture for the
@@ -4592,7 +4710,7 @@
   - "e2k"
   - "loong64"
 ```
-### <a name="var_target_gen_dir"></a>**target_gen_dir**: Directory for a target's generated files.
+### <a name="var_target_gen_dir"></a>**target_gen_dir**: Directory for a target's generated files.&nbsp;[Back to Top](#gn-reference)
 
 ```
   Absolute path to the target's generated file directory. This will be the
@@ -4616,7 +4734,7 @@
     args = [ "-o", rebase_path(target_gen_dir, root_build_dir) ]
   }
 ```
-### <a name="var_target_name"></a>**target_name**: [string] The name of the current target.
+### <a name="var_target_name"></a>**target_name**: [string] The name of the current target.&nbsp;[Back to Top](#gn-reference)
 
 ```
   Inside a target or template invocation, this variable refers to the name
@@ -4655,7 +4773,7 @@
   my_template("space_ray") {
   }
 ```
-### <a name="var_target_os"></a>**target_os**: The desired operating system for the build.
+### <a name="var_target_os"></a>**target_os**: The desired operating system for the build.&nbsp;[Back to Top](#gn-reference)
 
 ```
   This value should be used to indicate the desired operating system for the
@@ -4696,7 +4814,7 @@
   - "mac"
   - "win"
 ```
-### <a name="var_target_out_dir"></a>**target_out_dir**: [string] Directory for target output files.
+### <a name="var_target_out_dir"></a>**target_out_dir**: [string] Directory for target output files.&nbsp;[Back to Top](#gn-reference)
 
 ```
   Absolute path to the target's generated file directory. If your current
@@ -4721,7 +4839,7 @@
 ```
 ## <a name="target_variables"></a>Variables you set in targets
 
-### <a name="var_aliased_deps"></a>**aliased_deps**: [scope] Set of crate-dependency pairs.
+### <a name="var_aliased_deps"></a>**aliased_deps**: [scope] Set of crate-dependency pairs.&nbsp;[Back to Top](#gn-reference)
 
 ```
   Valid for `rust_library` targets and `executable`, `static_library`, and
@@ -4751,7 +4869,7 @@
   With the addition of `aliased_deps`, above target would instead compile with:
   `rustc ...command... --extern bar_renamed=<build_out_dir>/obj/bar`
 ```
-### <a name="var_all_dependent_configs"></a>**all_dependent_configs**: Configs to be forced on dependents.
+### <a name="var_all_dependent_configs"></a>**all_dependent_configs**: Configs to be forced on dependents.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A list of config labels.
@@ -4787,7 +4905,7 @@
      "deps" list. If a dependency is public, they will be applied
      recursively.
 ```
-### <a name="var_allow_circular_includes_from"></a>**allow_circular_includes_from**: Permit includes from deps.
+### <a name="var_allow_circular_includes_from"></a>**allow_circular_includes_from**: Permit includes from deps.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A list of target labels. Must be a subset of the target's "deps". These
@@ -4860,7 +4978,7 @@
     public_deps = [ ":c" ]
   }
 ```
-### <a name="var_arflags"></a>**arflags**: Arguments passed to static_library archiver.
+### <a name="var_arflags"></a>**arflags**: Arguments passed to static_library archiver.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A list of flags passed to the archive/lib command that creates static
@@ -4893,7 +5011,7 @@
      "deps" list. If a dependency is public, they will be applied
      recursively.
 ```
-### <a name="var_args"></a>**args**: (target variable) Arguments passed to an action.
+### <a name="var_args"></a>**args**: (target variable) Arguments passed to an action.&nbsp;[Back to Top](#gn-reference)
 
 ```
   For action and action_foreach targets, args is the list of arguments to pass
@@ -4910,7 +5028,7 @@
 
   See also "gn help action" and "gn help action_foreach".
 ```
-### <a name="var_asmflags"></a>**asmflags**: Flags passed to the assembler.
+### <a name="var_asmflags"></a>**asmflags**: Flags passed to the assembler.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A list of strings.
@@ -4936,7 +5054,7 @@
      "deps" list. If a dependency is public, they will be applied
      recursively.
 ```
-### <a name="var_assert_no_deps"></a>**assert_no_deps**: Ensure no deps on these targets.
+### <a name="var_assert_no_deps"></a>**assert_no_deps**: Ensure no deps on these targets.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A list of label patterns.
@@ -4976,7 +5094,7 @@
     ]
   }
 ```
-### <a name="var_bridge_header"></a>**bridge_header**: [string] Path to C/Objective-C compatibility header.
+### <a name="var_bridge_header"></a>**bridge_header**: [string] Path to C/Objective-C compatibility header.&nbsp;[Back to Top](#gn-reference)
 
 ```
   Valid for binary targets that contain Swift sources.
@@ -4984,7 +5102,7 @@
   Path to an header that includes C/Objective-C functions and types that
   needs to be made available to the Swift module.
 ```
-### <a name="var_bundle_contents_dir"></a>**bundle_contents_dir**: Expansion of {{bundle_contents_dir}} in
+### <a name="var_bundle_contents_dir"></a>**bundle_contents_dir**: Expansion of {{bundle_contents_dir}} in&nbsp;[Back to Top](#gn-reference)
 ```
                              create_bundle.
 
@@ -4996,7 +5114,7 @@
 
   See "gn help bundle_root_dir" for examples.
 ```
-### <a name="var_bundle_deps_filter"></a>**bundle_deps_filter**: [label list] A list of labels that are filtered out.
+### <a name="var_bundle_deps_filter"></a>**bundle_deps_filter**: [label list] A list of labels that are filtered out.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A list of target labels.
@@ -5027,7 +5145,7 @@
     ]
   }
 ```
-### <a name="var_bundle_executable_dir"></a>**bundle_executable_dir**
+### <a name="var_bundle_executable_dir"></a>**bundle_executable_dir**&nbsp;[Back to Top](#gn-reference)
 
 ```
   bundle_executable_dir: Expansion of {{bundle_executable_dir}} in
@@ -5041,7 +5159,7 @@
 
   See "gn help bundle_root_dir" for examples.
 ```
-### <a name="var_bundle_resources_dir"></a>**bundle_resources_dir**
+### <a name="var_bundle_resources_dir"></a>**bundle_resources_dir**&nbsp;[Back to Top](#gn-reference)
 
 ```
   bundle_resources_dir: Expansion of {{bundle_resources_dir}} in
@@ -5055,7 +5173,7 @@
 
   See "gn help bundle_root_dir" for examples.
 ```
-### <a name="var_bundle_root_dir"></a>**bundle_root_dir**: Expansion of {{bundle_root_dir}} in create_bundle.
+### <a name="var_bundle_root_dir"></a>**bundle_root_dir**: Expansion of {{bundle_root_dir}} in create_bundle.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A string corresponding to a path in root_build_dir.
@@ -5081,7 +5199,7 @@
     bundle_executable_dir = "${bundle_contents_dir}/MacOS"
   }
 ```
-### <a name="var_cflags"></a>**cflags***: Flags passed to the C compiler.
+### <a name="var_cflags"></a>**cflags***: Flags passed to the C compiler.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A list of strings.
@@ -5115,7 +5233,7 @@
      "deps" list. If a dependency is public, they will be applied
      recursively.
 ```
-### <a name="var_cflags_c"></a>**cflags***: Flags passed to the C compiler.
+### <a name="var_cflags_c"></a>**cflags***: Flags passed to the C compiler.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A list of strings.
@@ -5149,7 +5267,7 @@
      "deps" list. If a dependency is public, they will be applied
      recursively.
 ```
-### <a name="var_cflags_cc"></a>**cflags***: Flags passed to the C compiler.
+### <a name="var_cflags_cc"></a>**cflags***: Flags passed to the C compiler.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A list of strings.
@@ -5183,7 +5301,7 @@
      "deps" list. If a dependency is public, they will be applied
      recursively.
 ```
-### <a name="var_cflags_objc"></a>**cflags***: Flags passed to the C compiler.
+### <a name="var_cflags_objc"></a>**cflags***: Flags passed to the C compiler.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A list of strings.
@@ -5217,7 +5335,7 @@
      "deps" list. If a dependency is public, they will be applied
      recursively.
 ```
-### <a name="var_cflags_objcc"></a>**cflags***: Flags passed to the C compiler.
+### <a name="var_cflags_objcc"></a>**cflags***: Flags passed to the C compiler.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A list of strings.
@@ -5251,7 +5369,7 @@
      "deps" list. If a dependency is public, they will be applied
      recursively.
 ```
-### <a name="var_check_includes"></a>**check_includes**: [boolean] Controls whether a target's files are checked.
+### <a name="var_check_includes"></a>**check_includes**: [boolean] Controls whether a target's files are checked.&nbsp;[Back to Top](#gn-reference)
 
 ```
   When true (the default), the "gn check" command (as well as "gn gen" with the
@@ -5279,41 +5397,57 @@
     ...
   }
 ```
-### <a name="var_code_signing_args"></a>**code_signing_args**: [string list] Arguments passed to code signing script.
+### <a name="var_code_signing_args"></a>**code_signing_args**: [string list] [deprecated] Args for the post-processing script.&nbsp;[Back to Top](#gn-reference)
 
 ```
-  For create_bundle targets, code_signing_args is the list of arguments to pass
-  to the code signing script. Typically you would use source expansion (see "gn
-  help source_expansion") to insert the source file names.
+  For create_bundle targets, post_processing_args is the list of arguments to
+  pass to the post-processing script. Typically you would use source expansion
+  (see "gn help source_expansion") to insert the source file names.
 
-  See also "gn help create_bundle".
+  Deprecated: this is an old name for the "post_processing_args" property of
+  the "create_bundle" target. It is still supported to avoid breaking existing
+  build rules, but a warning will be emitted when it is used.
+
+  See also "gn help create_bundle" and "gn help post_processing_args".
 ```
-### <a name="var_code_signing_outputs"></a>**code_signing_outputs**: [file list] Output files for code signing step.
+### <a name="var_code_signing_outputs"></a>**code_signing_outputs**: [file list] [deprecated] Outputs of the post-processing step.&nbsp;[Back to Top](#gn-reference)
 
 ```
-  Outputs from the code signing step of a create_bundle target. Must refer to
+  Outputs from the post-processing step of a create_bundle target. Must refer to
   files in the build directory.
 
-  See also "gn help create_bundle".
+  Deprecated: this is an old name for the "post_processing_outputs" property of
+  the "create_bundle" target. It is still supported to avoid breaking existing
+  build rules, but a warning will be emitted when it is used.
+
+  See also "gn help create_bundle" and "gn help post_processing_args".
 ```
-### <a name="var_code_signing_script"></a>**code_signing_script**: [file name] Script for code signing."
+### <a name="var_code_signing_script"></a>**code_signing_script**: [file name] [deprecated] Script for the post-processing step."&nbsp;[Back to Top](#gn-reference)
 
 ```
   An absolute or buildfile-relative file name of a Python script to run for a
-  create_bundle target to perform code signing step.
+  create_bundle target to perform the post-processing step.
 
-  See also "gn help create_bundle".
+  Deprecated: this is an old name for the "post_processing_script" property of
+  the "create_bundle" target. It is still supported to avoid breaking existing
+  build rules, but a warning will be emitted when it is used.
+
+  See also "gn help create_bundle" and "gn help post_processing_args".
 ```
-### <a name="var_code_signing_sources"></a>**code_signing_sources**: [file list] Sources for code signing step.
+### <a name="var_code_signing_sources"></a>**code_signing_sources**: [file list] [deprecated] Sources for the post-processing step.&nbsp;[Back to Top](#gn-reference)
 
 ```
-  A list of files used as input for code signing script step of a create_bundle
+  A list of files used as input for the post-processing step of a create_bundle
   target. Non-absolute paths will be resolved relative to the current build
   file.
 
-  See also "gn help create_bundle".
+  Deprecated: this is an old name for the "post_processing_sources" property of
+  the "create_bundle" target. It is still supported to avoid breaking existing
+  build rules, but a warning will be emitted when it is used.
+
+  See also "gn help create_bundle" and "gn help post_processing_args".
 ```
-### <a name="var_complete_static_lib"></a>**complete_static_lib**: [boolean] Links all deps into a static library.
+### <a name="var_complete_static_lib"></a>**complete_static_lib**: [boolean] Links all deps into a static library.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A static library normally doesn't include code from dependencies, but instead
@@ -5348,7 +5482,7 @@
     deps = [ "bar" ]
   }
 ```
-### <a name="var_configs"></a>**configs**: Configs applying to this target or config.
+### <a name="var_configs"></a>**configs**: Configs applying to this target or config.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A list of config labels.
@@ -5441,13 +5575,13 @@
     }
   }
 ```
-### <a name="var_contents"></a>**contents**: Contents to write to file.
+### <a name="var_contents"></a>**contents**: Contents to write to file.&nbsp;[Back to Top](#gn-reference)
 
 ```
   The contents of the file for a generated_file target.
   See "gn help generated_file".
 ```
-### <a name="var_crate_name"></a>**crate_name**: [string] The name for the compiled crate.
+### <a name="var_crate_name"></a>**crate_name**: [string] The name for the compiled crate.&nbsp;[Back to Top](#gn-reference)
 
 ```
   Valid for `rust_library` targets and `executable`, `static_library`,
@@ -5455,7 +5589,7 @@
 
   If crate_name is not set, then this rule will use the target name.
 ```
-### <a name="var_crate_root"></a>**crate_root**: [string] The root source file for a binary or library.
+### <a name="var_crate_root"></a>**crate_root**: [string] The root source file for a binary or library.&nbsp;[Back to Top](#gn-reference)
 
 ```
   Valid for `rust_library` targets and `executable`, `static_library`,
@@ -5468,7 +5602,7 @@
   main.rs for executable) or a single file in sources, if sources contains
   only one file.
 ```
-### <a name="var_crate_type"></a>**crate_type**: [string] The type of linkage to use on a shared_library.
+### <a name="var_crate_type"></a>**crate_type**: [string] The type of linkage to use on a shared_library.&nbsp;[Back to Top](#gn-reference)
 
 ```
   Valid for `rust_library` targets and `executable`, `static_library`,
@@ -5488,7 +5622,7 @@
   Static libraries, rust libraries, and executables have this field set
   automatically.
 ```
-### <a name="var_data"></a>**data**: Runtime data file dependencies.
+### <a name="var_data"></a>**data**: Runtime data file dependencies.&nbsp;[Back to Top](#gn-reference)
 
 ```
   Lists files or directories required to run the given target. These are
@@ -5517,7 +5651,7 @@
 
   See "gn help runtime_deps" for how these are used.
 ```
-### <a name="var_data_deps"></a>**data_deps**: Non-linked dependencies.
+### <a name="var_data_deps"></a>**data_deps**: Non-linked dependencies.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A list of target labels.
@@ -5543,7 +5677,7 @@
     data_deps = [ "//plugins:my_runtime_plugin" ]
   }
 ```
-### <a name="var_data_keys"></a>**data_keys**: Keys from which to collect metadata.
+### <a name="var_data_keys"></a>**data_keys**: Keys from which to collect metadata.&nbsp;[Back to Top](#gn-reference)
 
 ```
   These keys are used to identify metadata to collect. If a walked target
@@ -5552,7 +5686,7 @@
 
   See "gn help generated_file".
 ```
-### <a name="var_defines"></a>**defines**: C preprocessor defines.
+### <a name="var_defines"></a>**defines**: C preprocessor defines.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A list of strings
@@ -5584,7 +5718,7 @@
 ```
   defines = [ "AWESOME_FEATURE", "LOG_LEVEL=3" ]
 ```
-### <a name="var_depfile"></a>**depfile**: [string] File name for input dependencies for actions.
+### <a name="var_depfile"></a>**depfile**: [string] File name for input dependencies for actions.&nbsp;[Back to Top](#gn-reference)
 
 ```
   If nonempty, this string specifies that the current action or action_foreach
@@ -5623,7 +5757,7 @@
     args = [ "{{source}}", "-o", rebase_path(depfile, root_build_dir)]
   }
 ```
-### <a name="var_deps"></a>**deps**: Private linked dependencies.
+### <a name="var_deps"></a>**deps**: Private linked dependencies.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A list of target labels.
@@ -5660,7 +5794,7 @@
 
   See also "public_deps".
 ```
-### <a name="var_externs"></a>**externs**: [scope] Set of Rust crate-dependency pairs.
+### <a name="var_externs"></a>**externs**: [scope] Set of Rust crate-dependency pairs.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A list, each value being a scope indicating a pair of crate name and the path
@@ -5684,7 +5818,7 @@
   This target would compile the `foo` crate with the following `extern` flag:
   `--extern bar=path/to/bar.rlib`.
 ```
-### <a name="var_framework_dirs"></a>**framework_dirs**: [directory list] Additional framework search directories.
+### <a name="var_framework_dirs"></a>**framework_dirs**: [directory list] Additional framework search directories.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A list of source directories.
@@ -5716,7 +5850,7 @@
 ```
   framework_dirs = [ "src/include", "//third_party/foo" ]
 ```
-### <a name="var_frameworks"></a>**frameworks**: [name list] Name of frameworks that must be linked.
+### <a name="var_frameworks"></a>**frameworks**: [name list] Name of frameworks that must be linked.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A list of framework names.
@@ -5748,7 +5882,7 @@
 ```
   frameworks = [ "Foundation.framework", "Foo.framework" ]
 ```
-### <a name="var_friend"></a>**friend**: Allow targets to include private headers.
+### <a name="var_friend"></a>**friend**: Allow targets to include private headers.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A list of label patterns (see "gn help label_pattern") that allow dependent
@@ -5809,7 +5943,7 @@
     ]
   }
 ```
-### <a name="var_gen_deps"></a>**gen_deps**: Declares targets that should generate when this one does.
+### <a name="var_gen_deps"></a>**gen_deps**: Declares targets that should generate when this one does.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A list of target labels.
@@ -5821,7 +5955,7 @@
   Since "gen_deps" are not build time dependencies, there can be cycles between
   "deps" and "gen_deps" or within "gen_deps" itself.
 ```
-### <a name="var_include_dirs"></a>**include_dirs**: Additional include directories.
+### <a name="var_include_dirs"></a>**include_dirs**: Additional include directories.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A list of source directories.
@@ -5853,7 +5987,7 @@
 ```
   include_dirs = [ "src/include", "//third_party/foo" ]
 ```
-### <a name="var_inputs"></a>**inputs**: Additional compile-time dependencies.
+### <a name="var_inputs"></a>**inputs**: Additional compile-time dependencies.&nbsp;[Back to Top](#gn-reference)
 
 ```
   Inputs are compile-time dependencies of the current target. This means that
@@ -5923,7 +6057,7 @@
     inputs = [ "input.data" ]
   }
 ```
-### <a name="var_ldflags"></a>**ldflags**: Flags passed to the linker.
+### <a name="var_ldflags"></a>**ldflags**: Flags passed to the linker.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A list of strings.
@@ -5955,7 +6089,7 @@
      "deps" list. If a dependency is public, they will be applied
      recursively.
 ```
-### <a name="var_lib_dirs"></a>**lib_dirs**: Additional library directories.
+### <a name="var_lib_dirs"></a>**lib_dirs**: Additional library directories.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A list of directories.
@@ -5998,7 +6132,7 @@
 ```
   lib_dirs = [ "/usr/lib/foo", "lib/doom_melon" ]
 ```
-### <a name="var_libs"></a>**libs**: Additional libraries to link.
+### <a name="var_libs"></a>**libs**: Additional libraries to link.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A list of library names or library paths.
@@ -6065,7 +6199,7 @@
   On Linux:
     libs = [ "ld" ]
 ```
-### <a name="var_metadata"></a>**metadata**: Metadata of this target.
+### <a name="var_metadata"></a>**metadata**: Metadata of this target.&nbsp;[Back to Top](#gn-reference)
 
 ```
   Metadata is a collection of keys and values relating to a particular target.
@@ -6090,7 +6224,7 @@
     }
   }
 ```
-### <a name="var_mnemonic"></a>**mnemonic**: [string] Prefix displayed when ninja runs this action.
+### <a name="var_mnemonic"></a>**mnemonic**: [string] Prefix displayed when ninja runs this action.&nbsp;[Back to Top](#gn-reference)
 
 ```
   Tools in GN can set their ninja "description" which is displayed when
@@ -6101,20 +6235,20 @@
 
   Whitespace is not allowed within a mnemonic.
 ```
-### <a name="var_module_name"></a>**module_name**: [string] The name for the compiled module.
+### <a name="var_module_name"></a>**module_name**: [string] The name for the compiled module.&nbsp;[Back to Top](#gn-reference)
 
 ```
   Valid for binary targets that contain Swift sources.
 
   If module_name is not set, then this rule will use the target name.
 ```
-### <a name="var_output_conversion"></a>**output_conversion**: Data format for generated_file targets.
+### <a name="var_output_conversion"></a>**output_conversion**: Data format for generated_file targets.&nbsp;[Back to Top](#gn-reference)
 
 ```
   Controls how the "contents" of a generated_file target is formatted.
   See `gn help io_conversion`.
 ```
-### <a name="var_output_dir"></a>**output_dir**: [directory] Directory to put output file in.
+### <a name="var_output_dir"></a>**output_dir**: [directory] Directory to put output file in.&nbsp;[Back to Top](#gn-reference)
 
 ```
   For library and executable targets, overrides the directory for the final
@@ -6141,7 +6275,7 @@
     ...
   }
 ```
-### <a name="var_output_extension"></a>**output_extension**: Value to use for the output's file extension.
+### <a name="var_output_extension"></a>**output_extension**: Value to use for the output's file extension.&nbsp;[Back to Top](#gn-reference)
 
 ```
   Normally the file extension for a target is based on the target type and the
@@ -6177,7 +6311,7 @@
     }
   }
 ```
-### <a name="var_output_name"></a>**output_name**: Define a name for the output file other than the default.
+### <a name="var_output_name"></a>**output_name**: Define a name for the output file other than the default.&nbsp;[Back to Top](#gn-reference)
 
 ```
   Normally the output name of a target will be based on the target name, so the
@@ -6203,7 +6337,7 @@
     output_name = "fluffy_bunny"
   }
 ```
-### <a name="var_output_prefix_override"></a>**output_prefix_override**: Don't use prefix for output name.
+### <a name="var_output_prefix_override"></a>**output_prefix_override**: Don't use prefix for output name.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A boolean that overrides the output prefix for a target. Defaults to false.
@@ -6227,7 +6361,7 @@
     ...
   }
 ```
-### <a name="var_outputs"></a>**outputs**: Output files for actions and copy targets.
+### <a name="var_outputs"></a>**outputs**: Output files for actions and copy targets.&nbsp;[Back to Top](#gn-reference)
 
 ```
   Outputs is valid for "copy", "action", and "action_foreach" target types and
@@ -6250,17 +6384,17 @@
     Action targets (excluding action_foreach) must list literal output file(s)
     with no source expansions. See "gn help action".
 ```
-### <a name="var_partial_info_plist"></a>**partial_info_plist**: [filename] Path plist from asset catalog compiler.
+### <a name="var_partial_info_plist"></a>**partial_info_plist**: [filename] Path plist from asset catalog compiler.&nbsp;[Back to Top](#gn-reference)
 
 ```
   Valid for create_bundle target, corresponds to the path for the partial
   Info.plist created by the asset catalog compiler that needs to be merged
-  with the application Info.plist (usually done by the code signing script).
+  with the application Info.plist (usually done by the post-processing script).
 
   The file will be generated regardless of whether the asset compiler has
   been invoked or not. See "gn help create_bundle".
 ```
-### <a name="var_pool"></a>**pool**: Label of the pool used by binary targets actions.
+### <a name="var_pool"></a>**pool**: Label of the pool used by binary targets actions.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A fully-qualified label representing the pool that will be used for binary
@@ -6280,7 +6414,41 @@
     ...
   }
 ```
-### <a name="var_precompiled_header"></a>**precompiled_header**: [string] Header file to precompile.
+### <a name="var_post_processing_args"></a>**post_processing_args**: [string list] Args for the post-processing script.&nbsp;[Back to Top](#gn-reference)
+
+```
+  For create_bundle targets, post_processing_args is the list of arguments to
+  pass to the post-processing script. Typically you would use source expansion
+  (see "gn help source_expansion") to insert the source file names.
+
+  See also "gn help create_bundle".
+```
+### <a name="var_post_processing_outputs"></a>**post_processing_outputs**: [file list] Outputs of the post-processing step.&nbsp;[Back to Top](#gn-reference)
+
+```
+  Outputs from the post-processing step of a create_bundle target. Must refer to
+  files in the build directory.
+
+  See also "gn help create_bundle".
+```
+### <a name="var_post_processing_script"></a>**post_processing_script**: [file name] Script for the post-processing step."&nbsp;[Back to Top](#gn-reference)
+
+```
+  An absolute or buildfile-relative file name of a Python script to run for a
+  create_bundle target to perform the post-processing step.
+
+  See also "gn help create_bundle".
+```
+### <a name="var_post_processing_sources"></a>**post_processing_sources**: [file list] Sources for the post-processing step.&nbsp;[Back to Top](#gn-reference)
+
+```
+  A list of files used as input for the post-processing step of a create_bundle
+  target. Non-absolute paths will be resolved relative to the current build
+  file.
+
+  See also "gn help create_bundle".
+```
+### <a name="var_precompiled_header"></a>**precompiled_header**: [string] Header file to precompile.&nbsp;[Back to Top](#gn-reference)
 
 ```
   Precompiled headers will be used when a target specifies this value, or a
@@ -6348,19 +6516,19 @@
       configs += [ ":use_precompiled_headers" ]
       ...
 ```
-### <a name="var_precompiled_header_type"></a>**precompiled_header_type**: [string] "gcc" or "msvc".
+### <a name="var_precompiled_header_type"></a>**precompiled_header_type**: [string] "gcc" or "msvc".&nbsp;[Back to Top](#gn-reference)
 
 ```
   See "gn help precompiled_header".
 ```
-### <a name="var_precompiled_source"></a>**precompiled_source**: [file name] Source file to precompile.
+### <a name="var_precompiled_source"></a>**precompiled_source**: [file name] Source file to precompile.&nbsp;[Back to Top](#gn-reference)
 
 ```
   The source file that goes along with the precompiled_header when using
   "msvc"-style precompiled headers. It will be implicitly added to the sources
   of the target. See "gn help precompiled_header".
 ```
-### <a name="var_product_type"></a>**product_type**: [string] Product type for the bundle.
+### <a name="var_product_type"></a>**product_type**: [string] Product type for the bundle.&nbsp;[Back to Top](#gn-reference)
 
 ```
   Valid for "create_bundle" and "bundle_data" targets.
@@ -6372,7 +6540,7 @@
   "create_bundle" with a non-empty product_type will have a corresponding
   target in the project.
 ```
-### <a name="var_public"></a>**public**: Declare public header files for a target.
+### <a name="var_public"></a>**public**: Declare public header files for a target.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A list of files that other targets can include. These permissions are checked
@@ -6425,7 +6593,7 @@
     # This allows starting compilation in dependent targets earlier.
     public = []
 ```
-### <a name="var_public_configs"></a>**public_configs**: Configs to be applied on dependents.
+### <a name="var_public_configs"></a>**public_configs**: Configs to be applied on dependents.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A list of config labels.
@@ -6516,7 +6684,7 @@
      "deps" list. If a dependency is public, they will be applied
      recursively.
 ```
-### <a name="var_public_deps"></a>**public_deps**: Declare public dependencies.
+### <a name="var_public_deps"></a>**public_deps**: Declare public dependencies.&nbsp;[Back to Top](#gn-reference)
 
 ```
   Public dependencies are like private dependencies (see "gn help deps") but
@@ -6567,7 +6735,7 @@
     public_deps = [ ":c" ]
   }
 ```
-### <a name="var_rebase"></a>**rebase**: Rebase collected metadata as files.
+### <a name="var_rebase"></a>**rebase**: Rebase collected metadata as files.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A boolean that triggers a rebase of collected metadata strings based on their
@@ -6583,7 +6751,7 @@
 
   See also "gn help generated_file".
 ```
-### <a name="var_response_file_contents"></a>**response_file_contents**: Contents of a response file for actions.
+### <a name="var_response_file_contents"></a>**response_file_contents**: Contents of a response file for actions.&nbsp;[Back to Top](#gn-reference)
 
 ```
   Sometimes the arguments passed to a script can be too long for the system's
@@ -6621,21 +6789,21 @@
     ]
   }
 ```
-### <a name="var_rustflags"></a>**rustflags**: Flags passed to the Rust compiler.
+### <a name="var_rustflags"></a>**rustflags**: Flags passed to the Rust compiler.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A list of strings.
 
   "rustflags" are passed to all invocations of the Rust compiler.
 ```
-### <a name="var_script"></a>**script**: Script file for actions.
+### <a name="var_script"></a>**script**: Script file for actions.&nbsp;[Back to Top](#gn-reference)
 
 ```
   An absolute or buildfile-relative file name of a Python script to run for a
   action and action_foreach targets (see "gn help action" and "gn help
   action_foreach").
 ```
-### <a name="var_sources"></a>**sources**: Source files for a target
+### <a name="var_sources"></a>**sources**: Source files for a target&nbsp;[Back to Top](#gn-reference)
 
 ```
   A list of files. Non-absolute paths will be resolved relative to the current
@@ -6677,7 +6845,7 @@
   copy
     The source are the source files to copy.
 ```
-### <a name="var_swiftflags"></a>**swiftflags**: Flags passed to the swift compiler.
+### <a name="var_swiftflags"></a>**swiftflags**: Flags passed to the swift compiler.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A list of strings.
@@ -6703,7 +6871,7 @@
      "deps" list. If a dependency is public, they will be applied
      recursively.
 ```
-### <a name="var_testonly"></a>**testonly**: Declares a target must only be used for testing.
+### <a name="var_testonly"></a>**testonly**: Declares a target must only be used for testing.&nbsp;[Back to Top](#gn-reference)
 
 ```
   Boolean. Defaults to false.
@@ -6724,7 +6892,7 @@
     ...
   }
 ```
-### <a name="var_transparent"></a>**transparent**: [bool] True if the bundle is transparent.
+### <a name="var_transparent"></a>**transparent**: [bool] True if the bundle is transparent.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A boolean.
@@ -6734,7 +6902,7 @@
   depends on it (unless the "bundle_data" target sets "product_type" to the
   same value as the "create_bundle" target).
 ```
-### <a name="var_visibility"></a>**visibility**: A list of labels that can depend on a target.
+### <a name="var_visibility"></a>**visibility**: A list of labels that can depend on a target.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A list of labels and label patterns that define which targets can depend on
@@ -6789,7 +6957,7 @@
   any targets in "//bar/" and any subdirectory thereof.
     visibility = [ "./*", "//bar/*" ]
 ```
-### <a name="var_walk_keys"></a>**walk_keys**: Key(s) for managing the metadata collection walk.
+### <a name="var_walk_keys"></a>**walk_keys**: Key(s) for managing the metadata collection walk.&nbsp;[Back to Top](#gn-reference)
 
 ```
   Defaults to [""].
@@ -6803,7 +6971,7 @@
 
   See "gn help generated_file".
 ```
-### <a name="var_weak_frameworks"></a>**weak_frameworks**: [name list] Name of frameworks that must be weak linked.
+### <a name="var_weak_frameworks"></a>**weak_frameworks**: [name list] Name of frameworks that must be weak linked.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A list of framework names.
@@ -6839,7 +7007,7 @@
 ```
   weak_frameworks = [ "OnlyOnNewerOSes.framework" ]
 ```
-### <a name="var_write_runtime_deps"></a>**write_runtime_deps**: Writes the target's runtime_deps to the given path.
+### <a name="var_write_runtime_deps"></a>**write_runtime_deps**: Writes the target's runtime_deps to the given path.&nbsp;[Back to Top](#gn-reference)
 
 ```
   Does not synchronously write the file, but rather schedules it to be written
@@ -6859,7 +7027,7 @@
   same as requesting the runtime deps be written on the command line (see "gn
   help --runtime-deps-list-file").
 ```
-### <a name="var_xcasset_compiler_flags"></a>**xcasset_compiler_flags**: Flags passed to xcassets compiler.
+### <a name="var_xcasset_compiler_flags"></a>**xcasset_compiler_flags**: Flags passed to xcassets compiler.&nbsp;[Back to Top](#gn-reference)
 
 ```
   A list of strings.
@@ -6868,7 +7036,7 @@
   xcassets compiler, corresponding to {{xcasset_compiler_flags}} substitution
   in compile_xcassets tool.
 ```
-### <a name="var_xcode_extra_attributes"></a>**xcode_extra_attributes**: [scope] Extra attributes for Xcode projects.
+### <a name="var_xcode_extra_attributes"></a>**xcode_extra_attributes**: [scope] Extra attributes for Xcode projects.&nbsp;[Back to Top](#gn-reference)
 
 ```
   The value defined in this scope will be copied to the EXTRA_ATTRIBUTES
@@ -6877,7 +7045,7 @@
 
   See "gn help create_bundle" for more information.
 ```
-### <a name="var_xcode_test_application_name"></a>**xcode_test_application_name**: Name for Xcode test target.
+### <a name="var_xcode_test_application_name"></a>**xcode_test_application_name**: Name for Xcode test target.&nbsp;[Back to Top](#gn-reference)
 
 ```
   Each unit and ui test target must have a test application target, and this
@@ -6897,7 +7065,7 @@
 ```
 ## <a name="other"></a>Other help topics
 
-### <a name="buildargs"></a>**Build Arguments Overview**
+### <a name="buildargs"></a>**Build Arguments Overview**&nbsp;[Back to Top](#gn-reference)
 
 ```
   Build arguments are variables passed in from outside of the build that build
@@ -6961,7 +7129,7 @@
   that apply only to those files. It is also useful to specify build args in an
   "import"-ed file if you want such arguments to apply to multiple buildfiles.
 ```
-### <a name="dotfile"></a>**.gn file**
+### <a name="dotfile"></a>**.gn file**&nbsp;[Back to Top](#gn-reference)
 
 ```
   When gn starts, it will search the current directory and parent directories
@@ -7144,7 +7312,7 @@
     is_component_build = false
   }
 ```
-### <a name="execution"></a>**Build graph and execution overview**
+### <a name="execution"></a>**Build graph and execution overview**&nbsp;[Back to Top](#gn-reference)
 
 #### **Overall build flow**
 
@@ -7237,7 +7405,7 @@
   from a build performance perspective. Since we hope to change this in the
   future, do not rely on this behavior.
 ```
-### <a name="grammar"></a>**Language and grammar for GN build files**
+### <a name="grammar"></a>**Language and grammar for GN build files**&nbsp;[Back to Top](#gn-reference)
 
 #### **Tokens**
 
@@ -7464,7 +7632,7 @@
   within the second, and vice versa. Note that this means inherited scopes are
   always unequal by definition.
 ```
-### <a name="io_conversion"></a>**Input and output conversion**
+### <a name="io_conversion"></a>**Input and output conversion**&nbsp;[Back to Top](#gn-reference)
 
 ```
   Input and output conversions are arguments to file and process functions
@@ -7568,7 +7736,7 @@
       Note that "trim value" is useless because the value parser skips
       whitespace anyway.
 ```
-### <a name="file_pattern"></a>**File patterns**
+### <a name="file_pattern"></a>**File patterns**&nbsp;[Back to Top](#gn-reference)
 
 ```
   File patterns are VERY limited regular expressions. They must match the
@@ -7602,7 +7770,7 @@
   "\bwin/*"
       Matches "win/foo" and "foo/win/bar.cc" but not "iwin/foo".
 ```
-### <a name="label_pattern"></a>**Label patterns**
+### <a name="label_pattern"></a>**Label patterns**&nbsp;[Back to Top](#gn-reference)
 
 ```
   A label pattern is a way of expressing one or more labels in a portion of the
@@ -7638,7 +7806,7 @@
         All targets in //foo and any subdirectory using the Windows
         toolchain.
 ```
-### <a name="labels"></a>**About labels**
+### <a name="labels"></a>**About labels**&nbsp;[Back to Top](#gn-reference)
 
 ```
   Everything that can participate in the dependency graph (targets, configs,
@@ -7698,7 +7866,7 @@
     //net  ->  //net:net
     //tools/gn  ->  //tools/gn:gn
 ```
-### <a name="metadata_collection"></a>**Metadata Collection**
+### <a name="metadata_collection"></a>**Metadata Collection**&nbsp;[Back to Top](#gn-reference)
 
 ```
   Metadata is information attached to targets throughout the dependency tree. GN
@@ -7841,7 +8009,7 @@
   various pieces of information about the components it should include in order
   to put together the correct image.
 ```
-### <a name="ninja_rules"></a>**Ninja build rules**
+### <a name="ninja_rules"></a>**Ninja build rules**&nbsp;[Back to Top](#gn-reference)
 
 #### **The "all" and "default" rules**
 
@@ -7894,7 +8062,7 @@
   To explicitly compile a target in a non-default toolchain, you must give
   Ninja the exact name of the output file relative to the build directory.
 ```
-### <a name="nogncheck"></a>**nogncheck**: Skip an include line from checking.
+### <a name="nogncheck"></a>**nogncheck**: Skip an include line from checking.&nbsp;[Back to Top](#gn-reference)
 
 ```
   GN's header checker helps validate that the includes match the build
@@ -7931,7 +8099,7 @@
   advice on fixing problems. Targets can also opt-out of checking, see
   "gn help check_includes".
 ```
-### <a name="runtime_deps"></a>**Runtime dependencies**
+### <a name="runtime_deps"></a>**Runtime dependencies**&nbsp;[Back to Top](#gn-reference)
 
 ```
   Runtime dependencies of a target are exposed via the "runtime_deps" category
@@ -8007,7 +8175,7 @@
   computing the runtime deps by setting runtime_outputs. If this is unset on
   the tool, the default will be the first output only.
 ```
-### <a name="source_expansion"></a>**How Source Expansion Works**
+### <a name="source_expansion"></a>**How Source Expansion Works**&nbsp;[Back to Top](#gn-reference)
 
 ```
   Source expansion is used for the action_foreach and copy target types to map
@@ -8122,7 +8290,7 @@
     //out/Debug/obj/mydirectory/input2.h
     //out/Debug/obj/mydirectory/input2.cc
 ```
-### <a name="switch_list"></a>**Available global switches**
+### <a name="switch_list"></a>**Available global switches**&nbsp;[Back to Top](#gn-reference)
 
 ```
   Do "gn help --the_switch_you_want_help_on" for more. Individual commands may

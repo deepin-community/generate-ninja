@@ -229,6 +229,7 @@ void TestWithScope::SetupToolchain(Toolchain* toolchain, bool use_toc) {
       rustc_tool.get());
   rustc_tool->set_outputs(SubstitutionList::MakeForTest(
       "{{root_out_dir}}/{{crate_name}}{{output_extension}}"));
+  rustc_tool->set_swiftmodule_switch("-Clink-arg=-swiftmodule=");
   toolchain->SetTool(std::move(rustc_tool));
 
   // SWIFT
@@ -237,6 +238,7 @@ void TestWithScope::SetupToolchain(Toolchain* toolchain, bool use_toc) {
       "swiftc --module-name {{module_name}} {{module_dirs}} {{inputs}}",
       swift_tool.get());
   swift_tool->set_outputs(SubstitutionList::MakeForTest(
+      "{{target_gen_dir}}/{{target_output_name}}.h",
       "{{target_out_dir}}/{{module_name}}.swiftmodule"));
   swift_tool->set_partial_outputs(SubstitutionList::MakeForTest(
       "{{target_out_dir}}/{{source_name_part}}.o"));
@@ -253,6 +255,7 @@ void TestWithScope::SetupToolchain(Toolchain* toolchain, bool use_toc) {
   cdylib_tool->set_default_output_extension(".so");
   cdylib_tool->set_outputs(SubstitutionList::MakeForTest(
       "{{target_out_dir}}/{{target_output_name}}{{output_extension}}"));
+  cdylib_tool->set_swiftmodule_switch("-Clink-arg=-swiftmodule=");
   toolchain->SetTool(std::move(cdylib_tool));
 
   // RUST DYLIB
@@ -266,6 +269,7 @@ void TestWithScope::SetupToolchain(Toolchain* toolchain, bool use_toc) {
   dylib_tool->set_default_output_extension(".so");
   dylib_tool->set_outputs(SubstitutionList::MakeForTest(
       "{{target_out_dir}}/{{target_output_name}}{{output_extension}}"));
+  dylib_tool->set_swiftmodule_switch("-Clink-arg=-swiftmodule=");
   toolchain->SetTool(std::move(dylib_tool));
 
   // RUST_PROC_MACRO
@@ -280,6 +284,7 @@ void TestWithScope::SetupToolchain(Toolchain* toolchain, bool use_toc) {
   rust_proc_macro_tool->set_default_output_extension(".so");
   rust_proc_macro_tool->set_outputs(SubstitutionList::MakeForTest(
       "{{target_out_dir}}/{{target_output_name}}{{output_extension}}"));
+  rust_proc_macro_tool->set_swiftmodule_switch("-Clink-arg=-swiftmodule=");
   toolchain->SetTool(std::move(rust_proc_macro_tool));
 
   // RLIB
