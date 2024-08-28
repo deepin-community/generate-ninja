@@ -1,3 +1,19 @@
+generate-ninja (0.0~git20240813.54f5b53-1) unstable; urgency=medium
+
+  * Uprev upstream.
+  * Fix malformed Build-Depends.
+  * Bump Debian Standard.
+  * Add new hardening patch.
+
+ -- Ricardo Ribalda Delgado <ribalda@debian.org>  Wed, 14 Aug 2024 15:06:02 +0200
+
+generate-ninja (0.0~git20240328.93ee9b9-1) unstable; urgency=medium
+
+  * Uprev upstream.
+  * Update email.
+
+ -- Ricardo Ribalda Delgado <ribalda@debian.org>  Tue, 02 Apr 2024 16:21:55 +0200
+
 generate-ninja (0.0~git20240221.03d10f1-1) unstable; urgency=medium
 
   * Uprev upstream.

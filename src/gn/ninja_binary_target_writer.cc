@@ -44,12 +44,14 @@ void NinjaBinaryTargetWriter::Run() {
   if (target_->source_types_used().RustSourceUsed()) {
     NinjaRustBinaryTargetWriter writer(target_, out_);
     writer.SetResolvedTargetData(GetResolvedTargetData());
+    writer.SetNinjaOutputs(ninja_outputs_);
     writer.Run();
     return;
   }
 
   NinjaCBinaryTargetWriter writer(target_, out_);
   writer.SetResolvedTargetData(GetResolvedTargetData());
+  writer.SetNinjaOutputs(ninja_outputs_);
   writer.Run();
 }
 
@@ -91,7 +93,8 @@ std::vector<OutputFile> NinjaBinaryTargetWriter::WriteInputsStampAndGetDep(
   stamp_file.value().append(".inputs.stamp");
 
   out_ << "build ";
-  path_output_.WriteFile(out_, stamp_file);
+  WriteOutput(stamp_file);
+
   out_ << ": " << GetNinjaRulePrefixForToolchain(settings_)
        << GeneralTool::kGeneralToolStamp;
 
@@ -203,12 +206,8 @@ void NinjaBinaryTargetWriter::AddSourceSetFiles(
   // Swift files may generate one object file per module or one per source file
   // depending on how the compiler is invoked (whole module optimization).
   if (source_set->source_types_used().SwiftSourceUsed()) {
-    const Tool* tool = source_set->toolchain()->GetToolForSourceTypeAsC(
-        SourceFile::SOURCE_SWIFT);
-
     std::vector<OutputFile> outputs;
-    SubstitutionWriter::ApplyListToLinkerAsOutputFile(
-        source_set, tool, tool->outputs(), &outputs);
+    source_set->swift_values().GetOutputs(source_set, &outputs);
 
     for (const OutputFile& output : outputs) {
       SourceFile output_as_source =
@@ -261,9 +260,10 @@ void NinjaBinaryTargetWriter::WriteCompilerBuildLine(
     const std::vector<OutputFile>& order_only_deps,
     const char* tool_name,
     const std::vector<OutputFile>& outputs,
-    bool can_write_source_info) {
+    bool can_write_source_info,
+    bool restat_output_allowed) {
   out_ << "build";
-  path_output_.WriteFiles(out_, outputs);
+  WriteOutputs(outputs);
 
   out_ << ": " << rule_prefix_ << tool_name;
   path_output_.WriteFiles(out_, sources);
@@ -285,6 +285,10 @@ void NinjaBinaryTargetWriter::WriteCompilerBuildLine(
     out_ << "  " << "source_name_part = "
          << FindFilenameNoExtension(&sources[0].value());
     out_ << std::endl;
+  }
+
+  if (restat_output_allowed) {
+    out_ << "  restat = 1" << std::endl;
   }
 }
 
