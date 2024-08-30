@@ -1,3 +1,9 @@
+generate-ninja (0.0~git20240813.54f5b53-1deepin1) unstable; urgency=medium
+
+  * Build with -Wno-error=maybe-uninitialized.
+
+ -- Tianyu Chen <sweetyfish@deepin.org>  Fri, 30 Aug 2024 17:39:36 +0800
+
 generate-ninja (0.0~git20240813.54f5b53-1) unstable; urgency=medium
 
   * Uprev upstream.
