@@ -1,3 +1,9 @@
+generate-ninja (0.0~git20250430.487f835-1deepin0) unstable; urgency=medium
+
+  * Drop "Build with -Wno-error=maybe-uninitialized" as build succeed without error.
+
+ -- Alex Rain <conrst3949@outlook.com>  Thu, 11 Sep 2025 17:38:20 +0800
+
 generate-ninja (0.0~git20250430.487f835-1) unstable; urgency=medium
 
   * Uprev upstream.

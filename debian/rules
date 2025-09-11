@@ -19,9 +19,6 @@ include /usr/share/dpkg/architecture.mk
 export CXX = $(DEB_HOST_GNU_TYPE)-g++
 export AR = $(DEB_HOST_GNU_TYPE)-ar
 
-# https://godbolt.org/z/cq4MY945K
-CXXFLAGS += -Wno-error=maybe-uninitialized
-
 %:
 	dh $@ --buildsystem=ninja --builddirectory=out
 
