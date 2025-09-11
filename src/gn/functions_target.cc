@@ -172,7 +172,8 @@ File name handling
     R"(
 Variables
 
-)" CONFIG_VALUES_VARS_HELP DEPENDENT_CONFIG_VARS DEPS_VARS GENERAL_TARGET_VARS ACTION_VARS
+)" CONFIG_VALUES_VARS_HELP DEPENDENT_CONFIG_VARS DEPS_VARS
+        GENERAL_TARGET_VARS ACTION_VARS
 
     R"(  * = required
 
@@ -242,7 +243,8 @@ File name handling
     R"(
 Variables
 
-)" CONFIG_VALUES_VARS_HELP DEPENDENT_CONFIG_VARS DEPS_VARS GENERAL_TARGET_VARS ACTION_VARS
+)" CONFIG_VALUES_VARS_HELP DEPENDENT_CONFIG_VARS DEPS_VARS
+        GENERAL_TARGET_VARS ACTION_VARS
 
     R"(  * = required
 
@@ -857,8 +859,8 @@ const char kStaticLibrary_Help[] =
 Variables
 
   complete_static_lib
-)" CONFIG_VALUES_VARS_HELP DEPS_VARS DEPENDENT_CONFIG_VARS GENERAL_TARGET_VARS RUST_VARS
-        LANGUAGE_HELP;
+)" CONFIG_VALUES_VARS_HELP DEPS_VARS DEPENDENT_CONFIG_VARS GENERAL_TARGET_VARS
+        RUST_VARS LANGUAGE_HELP;
 
 Value RunStaticLibrary(Scope* scope,
                        const FunctionCallNode* function,
@@ -971,7 +973,8 @@ Variables
 
 )" DEPENDENT_CONFIG_VARS DEPS_VARS GENERAL_TARGET_VARS
 
-    R"(  Generated file: contents, data_keys, rebase, walk_keys, output_conversion
+    R"(  Generated file: contents, data_keys, rebase, walk_keys, output_conversion,
+                  outputs
 
 Example (metadata collection)
 

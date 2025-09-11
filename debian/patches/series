@@ -1,2 +1,3 @@
 Unbundling-version-from-git.patch
 hardening.patch
+fix-armel.patch

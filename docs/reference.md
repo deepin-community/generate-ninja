@@ -54,6 +54,7 @@
     *   [import: Import a file into the current scope.](#func_import)
     *   [label_matches: Returns whether a label matches any of a list of patterns.](#func_label_matches)
     *   [not_needed: Mark variables from scope as not needed.](#func_not_needed)
+    *   [path_exists: Returns whether the given path exists.](#func_path_exists)
     *   [pool: Defines a pool object.](#func_pool)
     *   [print: Prints to the console.](#func_print)
     *   [print_stack_trace: Prints a stack trace.](#func_print_stack_trace)
@@ -784,7 +785,7 @@
       Generate files for an IDE. Currently supported values:
       "eclipse" - Eclipse CDT settings file.
       "vs" - Visual Studio project/solution files.
-             (default Visual Studio version: 2019)
+             (default Visual Studio version: 2022)
       "vs2013" - Visual Studio 2013 project/solution files.
       "vs2015" - Visual Studio 2015 project/solution files.
       "vs2017" - Visual Studio 2017 project/solution files.
@@ -1954,7 +1955,8 @@
   General: check_includes, configs, data, friend, inputs, metadata,
            output_extension, output_name, public, sources, testonly,
            visibility
-  Generated file: contents, data_keys, rebase, walk_keys, output_conversion
+  Generated file: contents, data_keys, rebase, walk_keys, output_conversion,
+                  outputs
 ```
 
 #### **Example (metadata collection)**
@@ -2956,7 +2958,7 @@
   process_file_template").
 
   source sets and groups: this will return a list containing the path of the
-  "stamp" file that Ninja will produce once all outputs are generated. This
+  phony target that Ninja completes once all outputs are generated. This
   probably isn't very useful.
 ```
 
@@ -3064,6 +3066,18 @@
   not_needed([ "data_deps", "deps" ])
   not_needed(invoker, "*", [ "config" ])
   not_needed(invoker, [ "data_deps", "deps" ])
+```
+### <a name="func_path_exists"></a>**path_exists**: Returns whether the given path exists.&nbsp;[Back to Top](#gn-reference)
+
+```
+  path_exists(path)
+```
+
+#### **Examples**:
+```
+  path_exists("//")  # true
+  path_exists("BUILD.gn")  # true
+  path_exists("/abs-non-existent")  # false
 ```
 ### <a name="func_pool"></a>**pool**: Defines a pool object.&nbsp;[Back to Top](#gn-reference)
 
@@ -3944,7 +3958,7 @@
         skip writing output if the output file has not changed.
 
         Normally, Ninja will assume that when a tool runs the output be new and
-        downstream dependents must be rebuild. When this is set to trye, Ninja
+        downstream dependents must be rebuild. When this is set to true, Ninja
         can skip rebuilding downstream dependents for input changes that don't
         actually affect the output.
 
@@ -4243,8 +4257,8 @@
         libraries in this target. Includes any specified renamed dependencies.
 
     {{rustdeps}}
-        Expands to the list of -Ldependency=<path> strings needed to compile
-        this target.
+        Expands to the list of -Ldependency=<path> and -Clink-arg=<path> strings
+        needed to compile this target.
 
     {{rustenv}}
         Expands to the list of environment variables.
@@ -4543,7 +4557,10 @@
 ### <a name="var_gn_version"></a>**gn_version**: [number] The version of gn.&nbsp;[Back to Top](#gn-reference)
 
 ```
-  Corresponds to the number printed by `gn --version`.
+  Corresponds to the number printed by `gn --version`. This variable is
+  only variable available in the dotfile (all the rest are missing
+  because the dotfile has to be parsed before args.gn or anything else
+  is processed).
 ```
 
 #### **Example**
@@ -4881,9 +4898,21 @@
   This addition happens in a second phase once a target and all of its
   dependencies have been resolved. Therefore, a target will not see these
   force-added configs in their "configs" variable while the script is running,
-  and they can not be removed. As a result, this capability should generally
-  only be used to add defines and include directories necessary to compile a
-  target's headers.
+  and they can not be removed.
+
+  Use of all_dependent_configs should be avoided when possible.
+
+  If your target has include_dirs and defines needed by targets that depend on
+  it, the correct solution is to add those settings to public_configs and those
+  targets choose whether to forward them up the dependency tree by whether they
+  depend on your target via public_deps or not.
+
+  There are two recommended uses of this feature:
+
+   1. Legacy cases that can't easily be updated to use the proper public deps
+      and configs.
+   2. Additional linker flag that need to be set on the final linked target
+      regardless of whether the dependency path is public or private.
 
   See also "public_configs".
 ```
@@ -6549,7 +6578,7 @@
   If no public files are declared, other targets (assuming they have visibility
   to depend on this target) can include any file in the sources list. If this
   variable is defined on a target, dependent targets may only include files on
-  this whitelist unless that target is marked as a friend (see "gn help
+  this allowlist unless that target is marked as a friend (see "gn help
   friend").
 
   Header file permissions are also subject to visibility. A target must be
@@ -7077,6 +7106,7 @@
 ```
   First, system default arguments are set based on the current system. The
   built-in arguments are:
+   - gn_version
    - host_cpu
    - host_os
    - current_cpu
@@ -7085,7 +7115,8 @@
    - target_os
 
   Next, project-specific overrides are applied. These are specified inside
-  the default_args variable of //.gn. See "gn help dotfile" for more.
+  the default_args variable of //.gn. See "gn help dotfile" for more. Note
+  that during processing of the dotfile itself, only `gn_version` is defined.
 
   If specified, arguments from the --args command line flag are used. If that
   flag is not specified, args from previous builds in the build directory will
@@ -7144,6 +7175,10 @@
   --dotfile:
 
     gn gen out/Debug --root=/home/build --dotfile=/home/my_gn_file.gn
+
+  The system variable `gn_version` is available in the dotfile, but none of
+  the other variables are, because the dotfile is processed before args.gn
+  or anything else is processed.
 ```
 
 #### **Variables**
@@ -7186,7 +7221,7 @@
       default. They can be checked explicitly by running
       "gn check --check-system" or "gn gen --check=system"
 
-  exec_script_whitelist [optional]
+  exec_script_allowlist [optional]
       A list of .gn/.gni files (not labels) that have permission to call the
       exec_script function. If this list is defined, calls to exec_script will
       be checked against this list and GN will fail if the current file isn't
@@ -7200,10 +7235,16 @@
       If unspecified, the ability to call exec_script is unrestricted.
 
       Example:
-        exec_script_whitelist = [
+        exec_script_allowlist = [
           "//base/BUILD.gn",
           "//build/my_config.gni",
         ]
+
+  exec_script_whitelist [optional]
+      A synonym for "exec_script_allowlist" that exists for backwards
+      compatibility. New code should use "exec_script_allowlist" instead.
+      If both values are set, only the value in "exec_script_allowlist" will
+      have any effect (so don't set both!).
 
   export_compile_commands [optional]
       A list of label patterns for which to generate a Clang compilation
@@ -7290,6 +7331,11 @@
       When set specifies the minimum required version of Ninja. The default
       required version is 1.7.2. Specifying a higher version might enable the
       use of some of newer features that can make the build more efficient.
+
+  no_stamp_files [optional]
+      A boolean flag that can be set to generate Ninja files that use phony
+      rules instead of stamp files whenever possible. This results in smaller
+      Ninja build plans, but requires at least Ninja 1.11.
 ```
 
 #### **Example .gn file contents**
@@ -7325,18 +7371,52 @@
   2. Execute the build config file identified by .gn to set up the global
      variables and default toolchain name. Any arguments, variables, defaults,
      etc. set up in this file will be visible to all files in the build.
+     Any values set in the `default_args` scope will be merged into
+     subsequent `declare_args()` scopes and override the default values.
 
-  3. Load the //BUILD.gn (in the source root directory).
+  3. Process the --args command line option or load the arguments from
+     the args.gn file in the build directory. These values will be merged
+     into any subsequent declare_args() scope (after the `default_args`
+     are merged in) to override the default values. See `help buildargs`
+     for more on how args are handled.
 
-  4. Recursively evaluate rules and load BUILD.gn in other directories as
+  4. Load the BUILDCONFIG.gn file and create a dedicated scope for it.
+
+  5. Load the //BUILD.gn (in the source root directory). The BUILD.gn
+     file is executed in a scope whose parent scope is the BUILDCONFIG.gn
+     file, i.e., only the definitions in the BUILDCONFIG.gn file exist.
+
+  5. If the BUILD.gn file imports other files, each of those other
+     files is executed in a separate scope whose parent is the BUILDCONFIG.gn
+     file, i.e., no definitions from the importing BUILD.gn file are
+     available. When the imported file has been fully processed, its scope
+     is merged into the BUILD.gn file's scope. If there is a conflict
+     (both the BUILD.gn file and the imported file define some variable
+     or rule with the same name but different values), a runtime error
+     will be thrown. See "gn help import" for more on this.
+
+  6. Recursively evaluate rules and load BUILD.gn in other directories as
      necessary to resolve dependencies. If a BUILD file isn't found in the
      specified location, GN will look in the corresponding location inside
      the secondary_source defined in the dotfile (see "gn help dotfile").
+     Each BUILD.gn file will again be executed in a new scope whose only
+     parent is BUILDCONFIG.gn's scope.
 
-  5. When a target's dependencies are resolved, write out the `.ninja`
+  7. If a target is referenced using an alternate toolchain, then
+
+     1. The toolchain file is loaded in a scope whose parent is the
+        BUILDCONFIG.gn file.
+     2. The BUILDCONFIG.gn file is re-loaded and re-parsed into a new
+        scope, with any `toolchain_args` merged into the defaults. See
+        `help buildargs` for more on how args are handled.
+     3. The BUILD.gn containing the target is then parsed as in step 5,
+        only we use the scope from step 7.2 instead of the default
+        BUILDCONFIG.gn scope.
+
+  8. When a target's dependencies are resolved, write out the `.ninja`
      file to disk.
 
-  6. When all targets are resolved, write out the root build.ninja file.
+  9. When all targets are resolved, write out the root build.ninja file.
 
   Note that the BUILD.gn file name may be modulated by .gn arguments such as
   build_file_extension.
@@ -7358,9 +7438,14 @@
     }
 
   There is also a generic "target" function for programmatically defined types
-  (see "gn help target"). You can define new types using templates (see "gn
-  help template"). A template defines some custom code that expands to one or
-  more other targets.
+  (see "gn help target").
+
+  You can define new types using templates (see "gn help template"). A template
+  defines some custom code that expands to one or more other targets. When a
+  template is invoked, it is executed in the scope of the file that defined the
+  template (as described above). To access values from the caller's scope, you
+  must use the `invoker` variable (see "gn help template" for more on the
+  invoker).
 
   Before executing the code inside the target's { }, the target defaults are
   applied (see "gn help set_defaults"). It will inject implicit variable
@@ -8068,7 +8153,7 @@
   GN's header checker helps validate that the includes match the build
   dependency graph. Sometimes an include might be conditional or otherwise
   problematic, but you want to specifically allow it. In this case, it can be
-  whitelisted.
+  allowlisted.
 
   Include lines containing the substring "nogncheck" will be excluded from
   header checking. The most common case is a conditional include:
@@ -8307,6 +8392,7 @@
     *   --nocolor: Force non-colored output.
     *   -q: Quiet mode. Don't print output on success.
     *   --root: Explicitly specify source root.
+    *   --root-pattern: Add root pattern override.
     *   --root-target: Override the root target.
     *   --runtime-deps-list-file: Save runtime dependencies for targets in file.
     *   --script-executable: Set the executable used to execute scripts.

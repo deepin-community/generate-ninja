@@ -16,7 +16,10 @@ const char kGnVersion_HelpShort[] = "gn_version: [number] The version of gn.";
 const char kGnVersion_Help[] =
     R"(gn_version: [number] The version of gn.
 
-  Corresponds to the number printed by `gn --version`.
+  Corresponds to the number printed by `gn --version`. This variable is
+  only variable available in the dotfile (all the rest are missing
+  because the dotfile has to be parsed before args.gn or anything else
+  is processed).
 
 Example
 
@@ -437,9 +440,21 @@ const char kAllDependentConfigs_Help[] =
   This addition happens in a second phase once a target and all of its
   dependencies have been resolved. Therefore, a target will not see these
   force-added configs in their "configs" variable while the script is running,
-  and they can not be removed. As a result, this capability should generally
-  only be used to add defines and include directories necessary to compile a
-  target's headers.
+  and they can not be removed.
+
+  Use of all_dependent_configs should be avoided when possible.
+
+  If your target has include_dirs and defines needed by targets that depend on
+  it, the correct solution is to add those settings to public_configs and those
+  targets choose whether to forward them up the dependency tree by whether they
+  depend on your target via public_deps or not.
+
+  There are two recommended uses of this feature:
+
+   1. Legacy cases that can't easily be updated to use the proper public deps
+      and configs.
+   2. Additional linker flag that need to be set on the final linked target
+      regardless of whether the dependency path is public or private.
 
   See also "public_configs".
 )" COMMON_ORDERING_HELP;
@@ -1457,7 +1472,8 @@ const char kLibDirs_Help[] =
   Specifies additional directories passed to the linker for searching for the
   required libraries. If an item is not an absolute path, it will be treated as
   being relative to the current build file.
-)" COMMON_LIB_INHERITANCE_HELP COMMON_ORDERING_HELP LIBS_AND_LIB_DIRS_ORDERING_HELP
+)" COMMON_LIB_INHERITANCE_HELP
+        COMMON_ORDERING_HELP LIBS_AND_LIB_DIRS_ORDERING_HELP
     R"(
 Example
 
@@ -1882,7 +1898,7 @@ const char kPublic_Help[] =
   If no public files are declared, other targets (assuming they have visibility
   to depend on this target) can include any file in the sources list. If this
   variable is defined on a target, dependent targets may only include files on
-  this whitelist unless that target is marked as a friend (see "gn help
+  this allowlist unless that target is marked as a friend (see "gn help
   friend").
 
   Header file permissions are also subject to visibility. A target must be

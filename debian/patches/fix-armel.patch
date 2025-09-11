@@ -1,0 +1,18 @@
+Fix build with armel g++
+
+There is a report upstream: https://bugs.chromium.org/p/gn/issues/detail?id=376&no_tracker_redirect=1
+This is just a workaround
+
+Forwarded: not-needed
+diff --git a/build/gen.py b/build/gen.py
+index 0ef92473..80f78e0f 100755
+--- a/build/gen.py
++++ b/build/gen.py
+@@ -514,6 +514,7 @@ def WriteGNNinja(path, platform, host, options, args_list):
+         '-Wno-deprecated-copy',
+         '-Wno-implicit-fallthrough',
+         '-Wno-redundant-move',
++        '-Wno-unused-value',
+         '-Wno-unused-variable',
+         '-Wno-strict-aliasing',    # Dereferencing punned pointer
+         '-Wno-cast-function-type', # Casting FARPROC to RegDeleteKeyExPtr

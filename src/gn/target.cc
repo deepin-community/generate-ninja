@@ -6,6 +6,8 @@
 
 #include <stddef.h>
 
+#include <algorithm>
+
 #include "base/stl_util.h"
 #include "base/strings/string_util.h"
 #include "base/strings/stringprintf.h"
@@ -213,18 +215,52 @@ Overall build flow
   2. Execute the build config file identified by .gn to set up the global
      variables and default toolchain name. Any arguments, variables, defaults,
      etc. set up in this file will be visible to all files in the build.
+     Any values set in the `default_args` scope will be merged into
+     subsequent `declare_args()` scopes and override the default values.
 
-  3. Load the //BUILD.gn (in the source root directory).
+  3. Process the --args command line option or load the arguments from
+     the args.gn file in the build directory. These values will be merged
+     into any subsequent declare_args() scope (after the `default_args`
+     are merged in) to override the default values. See `help buildargs`
+     for more on how args are handled.
 
-  4. Recursively evaluate rules and load BUILD.gn in other directories as
+  4. Load the BUILDCONFIG.gn file and create a dedicated scope for it.
+
+  5. Load the //BUILD.gn (in the source root directory). The BUILD.gn
+     file is executed in a scope whose parent scope is the BUILDCONFIG.gn
+     file, i.e., only the definitions in the BUILDCONFIG.gn file exist.
+
+  5. If the BUILD.gn file imports other files, each of those other
+     files is executed in a separate scope whose parent is the BUILDCONFIG.gn
+     file, i.e., no definitions from the importing BUILD.gn file are
+     available. When the imported file has been fully processed, its scope
+     is merged into the BUILD.gn file's scope. If there is a conflict
+     (both the BUILD.gn file and the imported file define some variable
+     or rule with the same name but different values), a runtime error
+     will be thrown. See "gn help import" for more on this.
+
+  6. Recursively evaluate rules and load BUILD.gn in other directories as
      necessary to resolve dependencies. If a BUILD file isn't found in the
      specified location, GN will look in the corresponding location inside
      the secondary_source defined in the dotfile (see "gn help dotfile").
+     Each BUILD.gn file will again be executed in a new scope whose only
+     parent is BUILDCONFIG.gn's scope.
 
-  5. When a target's dependencies are resolved, write out the `.ninja`
+  7. If a target is referenced using an alternate toolchain, then
+
+     1. The toolchain file is loaded in a scope whose parent is the
+        BUILDCONFIG.gn file.
+     2. The BUILDCONFIG.gn file is re-loaded and re-parsed into a new
+        scope, with any `toolchain_args` merged into the defaults. See
+        `help buildargs` for more on how args are handled.
+     3. The BUILD.gn containing the target is then parsed as in step 5,
+        only we use the scope from step 7.2 instead of the default
+        BUILDCONFIG.gn scope.
+
+  8. When a target's dependencies are resolved, write out the `.ninja`
      file to disk.
 
-  6. When all targets are resolved, write out the root build.ninja file.
+  9. When all targets are resolved, write out the root build.ninja file.
 
   Note that the BUILD.gn file name may be modulated by .gn arguments such as
   build_file_extension.
@@ -244,9 +280,14 @@ Executing target definitions and templates
     }
 
   There is also a generic "target" function for programmatically defined types
-  (see "gn help target"). You can define new types using templates (see "gn
-  help template"). A template defines some custom code that expands to one or
-  more other targets.
+  (see "gn help target").
+
+  You can define new types using templates (see "gn help template"). A template
+  defines some custom code that expands to one or more other targets. When a
+  template is invoked, it is executed in the scope of the file that defined the
+  template (as described above). To access values from the caller's scope, you
+  must use the `invoker` variable (see "gn help template" for more on the
+  invoker).
 
   Before executing the code inside the target's { }, the target defaults are
   applied (see "gn help set_defaults"). It will inject implicit variable
@@ -630,8 +671,7 @@ bool Target::GetOutputsAsSourceFiles(const LocationRange& loc_for_error,
     if (!bundle_data().GetOutputsAsSourceFiles(settings(), this, outputs, err))
       return false;
   } else if (IsBinary() && output_type() != Target::SOURCE_SET) {
-    // Binary target with normal outputs (source sets have stamp outputs like
-    // groups).
+    // Binary target with normal outputs (source sets have phony targets).
     DCHECK(IsBinary()) << static_cast<int>(output_type());
     if (!build_complete) {
       // Can't access the toolchain for a target before the build is complete.
@@ -651,15 +691,20 @@ bool Target::GetOutputsAsSourceFiles(const LocationRange& loc_for_error,
           output_file.AsSourceFile(settings()->build_settings()));
     }
   } else {
-    // Everything else (like a group or bundle_data) has a stamp output. The
-    // dependency output file should have computed what this is. This won't be
+    // Everything else (like a group or bundle_data) has a phony output. The
+    // dependency output phony should have computed what this is. This won't be
     // valid unless the build is complete.
     if (!build_complete) {
       *err = Err(loc_for_error, kBuildIncompleteMsg);
       return false;
     }
-    outputs->push_back(
-        dependency_output_file().AsSourceFile(settings()->build_settings()));
+
+    // The dependency output might be empty if there is no output file or a
+    // phony alias for a set of inputs.
+    if (has_dependency_output()) {
+      outputs->push_back(
+          dependency_output().AsSourceFile(settings()->build_settings()));
+    }
   }
   return true;
 }
@@ -774,27 +819,79 @@ void Target::PullRecursiveBundleData() {
     bundle_data().OnTargetResolved(this);
 }
 
+bool Target::HasRealInputs() const {
+  // This check is only necessary if this target will result in a phony target.
+  // Phony targets with no real inputs are treated as always dirty.
+
+  // Actions and generated_file always have at least one input file: the script
+  // used to execute the action or generated file itself. As such, they will
+  // never have an input-less phony target. We check this first to elide the
+  // common checks.
+  if (output_type() == ACTION || output_type() == ACTION_FOREACH ||
+      output_type() == GENERATED_FILE) {
+    return true;
+  }
+
+  // If any of this target's dependencies is non-phony target or a phony target
+  // with real inputs, then this target should be considered to have inputs.
+  for (const auto& pair : GetDeps(DEPS_ALL)) {
+    if (pair.ptr->has_dependency_output()) {
+      return true;
+    }
+  }
+
+  if (output_type() == BUNDLE_DATA) {
+    return !sources().empty();
+  }
+  if (output_type() == CREATE_BUNDLE) {
+    // CREATE_BUNDLE targets pick up most of their inputs in the form of
+    // dependencies on bundle_data targets, which were checked above when
+    // looping through GetDeps. This code handles the remaining possible
+    // CREATE_BUNDLE inputs.
+    return !bundle_data().assets_catalog_sources().empty() ||
+           !bundle_data().partial_info_plist().is_null() ||
+           !bundle_data().post_processing_script().is_null();
+  }
+
+  // If any of this target's sources will result in output files, then this
+  // target should be considered to have real inputs.
+  std::vector<OutputFile> tool_outputs;
+  return std::any_of(
+      sources().begin(), sources().end(), [&, this](const auto& source) {
+        const char* tool_name = Tool::kToolNone;
+        return GetOutputFilesForSource(source, &tool_name, &tool_outputs);
+      });
+}
+
 bool Target::FillOutputFiles(Err* err) {
   const Tool* tool = toolchain_->GetToolForTargetFinalOutput(this);
   bool check_tool_outputs = false;
   switch (output_type_) {
-    case GROUP:
-    case BUNDLE_DATA:
-    case CREATE_BUNDLE:
-    case SOURCE_SET:
-    case COPY_FILES:
     case ACTION:
     case ACTION_FOREACH:
-    case GENERATED_FILE: {
-      // These don't get linked to and use stamps which should be the first
-      // entry in the outputs. These stamps are named
-      // "<target_out_dir>/<targetname>.stamp". Setting "output_name" does not
-      // affect the stamp file name: it is always based on the original target
-      // name.
-      dependency_output_file_ =
-          GetBuildDirForTargetAsOutputFile(this, BuildDirType::OBJ);
-      dependency_output_file_.value().append(label().name());
-      dependency_output_file_.value().append(".stamp");
+    case BUNDLE_DATA:
+    case COPY_FILES:
+    case CREATE_BUNDLE:
+    case GENERATED_FILE:
+    case GROUP:
+    case SOURCE_SET: {
+      if (settings()->build_settings()->no_stamp_files()) {
+        if (HasRealInputs()) {
+          dependency_output_alias_ =
+              GetBuildDirForTargetAsOutputFile(this, BuildDirType::PHONY);
+          dependency_output_alias_.value().append(label().name());
+        }
+      } else {
+        // These don't get linked to and use stamps which should be the first
+        // entry in the outputs. These stamps are named
+        // "<target_out_dir>/<targetname>.stamp". Setting "output_name" does not
+        // affect the stamp file name: it is always based on the original target
+        // name.
+        dependency_output_file_ =
+            GetBuildDirForTargetAsOutputFile(this, BuildDirType::OBJ);
+        dependency_output_file_.value().append(label().name());
+        dependency_output_file_.value().append(".stamp");
+      }
       break;
     }
     case EXECUTABLE:
