@@ -5,6 +5,7 @@
 #include "gn/ninja_rust_binary_target_writer.h"
 
 #include "gn/config.h"
+#include "gn/label_ptr.h"
 #include "gn/pool.h"
 #include "gn/rust_values.h"
 #include "gn/scheduler.h"
@@ -584,7 +585,7 @@ TEST_F(NinjaRustBinaryTargetWriterTest, RlibDepsAcrossGroups) {
         "\n"
         "build obj/bar/libmylib.rlib: rust_rlib ../../bar/lib.rs | "
         "../../bar/mylib.rs ../../bar/lib.rs obj/bar/libmymacro.so || "
-        "obj/baz/group.stamp\n"
+        "phony/baz/group\n"
         "  source_file_part = lib.rs\n"
         "  source_name_part = lib\n"
         "  externs = --extern mymacro=obj/bar/libmymacro.so\n"
@@ -824,7 +825,7 @@ TEST_F(NinjaRustBinaryTargetWriterTest, NonRustDeps) {
         "../../foo/main.rs obj/baz/sourceset.csourceset.o "
         "obj/bar/libmylib.rlib "
         "obj/foo/libstatic.a ./libshared.so ./libshared_with_toc.so.TOC "
-        "|| obj/baz/sourceset.stamp\n"
+        "|| phony/baz/sourceset\n"
         "  source_file_part = main.rs\n"
         "  source_name_part = main\n"
         "  externs = --extern mylib=obj/bar/libmylib.rlib\n"
@@ -1089,8 +1090,8 @@ TEST_F(NinjaRustBinaryTargetWriterTest, RlibInLibrary) {
       "obj/pub_in_staticlib/libpub_in_staticlib.rlib "
       "obj/priv_in_staticlib/libpriv_in_staticlib.rlib "
       "obj/pub_in_dylib/libpub_in_dylib.rlib || "
-      "obj/pub_sset_in_staticlib/pub_sset_in_staticlib.stamp "
-      "obj/priv_sset_in_staticlib/priv_sset_in_staticlib.stamp\n"
+      "phony/pub_sset_in_staticlib/pub_sset_in_staticlib "
+      "phony/priv_sset_in_staticlib/priv_sset_in_staticlib\n"
       "  source_file_part = main.rs\n"
       "  source_name_part = main\n"
       "  externs = "
@@ -1541,7 +1542,7 @@ TEST_F(NinjaRustBinaryTargetWriterTest, GroupDeps) {
         "\n"
         "build ./foo_bar: rust_bin ../../foo/main.rs | "
         "../../foo/source.rs ../../foo/main.rs obj/bar/libmylib.rlib || "
-        "obj/baz/group.stamp\n"
+        "phony/baz/group\n"
         "  source_file_part = main.rs\n"
         "  source_name_part = main\n"
         "  externs = --extern mylib=obj/bar/libmylib.rlib\n"
@@ -1632,7 +1633,7 @@ TEST_F(NinjaRustBinaryTargetWriterTest, Inputs) {
     writer.Run();
 
     const char expected[] =
-        "build obj/foo/bar.inputs.stamp: stamp ../../foo/config.json "
+        "build phony/foo/bar.inputs: phony ../../foo/config.json "
         "../../foo/template.h\n"
         "crate_name = foo_bar\n"
         "crate_type = bin\n"
@@ -1647,7 +1648,7 @@ TEST_F(NinjaRustBinaryTargetWriterTest, Inputs) {
         "\n"
         "build ./foo_bar: rust_bin ../../foo/main.rs | ../../foo/source.rs "
         "../../foo/main.rs ../../foo/config.json ../../foo/template.h "
-        "|| obj/foo/bar.inputs.stamp\n"
+        "|| phony/foo/bar.inputs\n"
         "  source_file_part = main.rs\n"
         "  source_name_part = main\n"
         "  externs =\n"
@@ -1864,6 +1865,14 @@ TEST_F(NinjaRustBinaryTargetWriterTest, TransitiveRustDepsThroughSourceSet) {
   sset.private_deps().push_back(LabelTargetPair(&rlib_priv));
   ASSERT_TRUE(sset.OnResolved(&err));
 
+  Target modules(setup.settings(), Label(SourceDir("//sset/"), "module"));
+  modules.set_output_type(Target::SOURCE_SET);
+  modules.visibility().SetPublic();
+  modules.sources().push_back(SourceFile("//sset/module.modulemap"));
+  modules.source_types_used().Set(SourceFile::SOURCE_MODULEMAP);
+  modules.SetToolchain(setup.toolchain());
+  ASSERT_TRUE(modules.OnResolved(&err));
+
   Target target(setup.settings(), Label(SourceDir("//linked/"), "exe"));
   target.set_output_type(Target::EXECUTABLE);
   target.visibility().SetPublic();
@@ -1873,6 +1882,7 @@ TEST_F(NinjaRustBinaryTargetWriterTest, TransitiveRustDepsThroughSourceSet) {
   target.rust_values().set_crate_root(main);
   target.rust_values().crate_name() = "exe";
   target.private_deps().push_back(LabelTargetPair(&sset));
+  target.private_deps().push_back(LabelTargetPair(&modules));
   target.SetToolchain(setup.toolchain());
   ASSERT_TRUE(target.OnResolved(&err));
 
@@ -1895,7 +1905,8 @@ TEST_F(NinjaRustBinaryTargetWriterTest, TransitiveRustDepsThroughSourceSet) {
         "\n"
         "build ./exe: rust_bin ../../linked/exe.rs | ../../linked/exe.rs "
         "obj/sset/bar.input1.o obj/public/libbehind_sourceset_public.rlib "
-        "obj/private/libbehind_sourceset_private.rlib || obj/sset/bar.stamp\n"
+        "obj/private/libbehind_sourceset_private.rlib || phony/sset/bar "
+        "phony/sset/module\n"
         "  source_file_part = exe.rs\n"
         "  source_name_part = exe\n"
         "  externs = --extern "
@@ -1964,6 +1975,13 @@ TEST_F(NinjaRustBinaryTargetWriterTest, FrameworksAndFrameworkDirs) {
   Err err;
   TestWithScope setup;
 
+  // An action for our library to depend on.
+  Target action(setup.settings(), Label(SourceDir("//bar"), "action"));
+  action.set_output_type(Target::ACTION_FOREACH);
+  action.visibility().SetPublic();
+  action.SetToolchain(setup.toolchain());
+  ASSERT_TRUE(action.OnResolved(&err));
+
   // A config that force linking with the framework.
   Config framework_config(setup.settings(),
                           Label(SourceDir("//bar"), "framework_config"));
@@ -1978,6 +1996,7 @@ TEST_F(NinjaRustBinaryTargetWriterTest, FrameworksAndFrameworkDirs) {
   framework.set_output_type(Target::CREATE_BUNDLE);
   framework.bundle_data().product_type() = "com.apple.product-type.framework";
   framework.public_configs().push_back(LabelConfigPair(&framework_config));
+  framework.private_deps().push_back(LabelTargetPair(&action));
   framework.SetToolchain(setup.toolchain());
   framework.visibility().SetPublic();
   ASSERT_TRUE(framework.OnResolved(&err));
@@ -2013,7 +2032,7 @@ TEST_F(NinjaRustBinaryTargetWriterTest, FrameworksAndFrameworkDirs) {
       "target_output_name = exe\n"
       "\n"
       "build ./exe: rust_bin ../../linked/exe.rs | ../../linked/exe.rs || "
-      "obj/bar/framework.stamp obj/bar/framework.stamp\n"
+      "phony/bar/framework\n"
       "  source_file_part = exe.rs\n"
       "  source_name_part = exe\n"
       "  externs =\n"
@@ -2072,7 +2091,7 @@ TEST_F(NinjaRustBinaryTargetWriterTest, SwiftModule) {
       "\n"
       "build ./exe: rust_bin ../../linked/exe.rs | ../../linked/exe.rs "
       "obj/foo/file1.o obj/foo/file2.o || "
-      "obj/foo/foo.stamp obj/foo/Foo.swiftmodule obj/foo/foo.stamp\n"
+      "phony/foo/foo obj/foo/Foo.swiftmodule phony/foo/foo\n"
       "  source_file_part = exe.rs\n"
       "  source_name_part = exe\n"
       "  externs =\n"

@@ -547,6 +547,7 @@ TEST_F(TargetTest, LinkAndDepOutputs) {
   ASSERT_TRUE(target.OnResolved(&err));
 
   EXPECT_EQ("./liba.so", target.link_output_file().value());
+  ASSERT_TRUE(target.has_dependency_output_file());
   EXPECT_EQ("./liba.so.TOC", target.dependency_output_file().value());
 
   ASSERT_EQ(1u, target.runtime_outputs().size());
@@ -635,6 +636,7 @@ TEST_F(TargetTest, RuntimeOuputs) {
   ASSERT_TRUE(target.OnResolved(&err));
 
   EXPECT_EQ("./a.dll.lib", target.link_output_file().value());
+  ASSERT_TRUE(target.has_dependency_output_file());
   EXPECT_EQ("./a.dll.lib", target.dependency_output_file().value());
 
   ASSERT_EQ(2u, target.runtime_outputs().size());
@@ -718,6 +720,7 @@ TEST_F(TargetTest, GetOutputFilesForSource_Binary) {
 
   Target target(setup.settings(), Label(SourceDir("//a/"), "a"));
   target.set_output_type(Target::SOURCE_SET);
+  target.sources().push_back(SourceFile("//a/source_file1.cc"));
   target.SetToolchain(&toolchain);
   Err err;
   ASSERT_TRUE(target.OnResolved(&err));
@@ -739,7 +742,7 @@ TEST_F(TargetTest, GetOutputFilesForSource_Binary) {
   EXPECT_TRUE(target.GetOutputsAsSourceFiles(LocationRange(), true,
                                              &computed_outputs, &err));
   ASSERT_EQ(1u, computed_outputs.size());
-  EXPECT_EQ("//out/Debug/obj/a/a.stamp", computed_outputs[0].value());
+  EXPECT_EQ("//out/Debug/phony/a/a", computed_outputs[0].value());
 }
 
 TEST_F(TargetTest, CheckStampFileName) {
@@ -767,9 +770,7 @@ TEST_F(TargetTest, CheckStampFileName) {
   std::vector<SourceFile> computed_outputs;
   EXPECT_TRUE(target.GetOutputsAsSourceFiles(LocationRange(), true,
                                              &computed_outputs, &err));
-  ASSERT_EQ(1u, computed_outputs.size());
-  EXPECT_EQ("//out/Debug/obj/a/a.stamp", computed_outputs[0].value())
-      << "was instead: " << computed_outputs[0].value();
+  ASSERT_EQ(0u, computed_outputs.size()) << computed_outputs.size();
 }
 
 // Tests Target::GetOutputFilesForSource for action_foreach targets (these, like
@@ -860,6 +861,46 @@ TEST_F(TargetTest, GetOutputFilesForSource_Action) {
                                              &computed_outputs, &err));
   ASSERT_EQ(1u, computed_outputs.size()) << computed_outputs.size();
   EXPECT_EQ("//out/Debug/one", computed_outputs[0].value());
+}
+
+TEST_F(TargetTest, HasRealInputs) {
+  TestWithScope setup;
+  Err err;
+  // Action always have real inputs.
+  TestTarget target_a(setup, "//a:a", Target::ACTION);
+  ASSERT_TRUE(target_a.FillOutputFiles(&err));
+  EXPECT_TRUE(target_a.HasRealInputs());
+
+  // A target with no inputs and no deps has no real inputs.
+  TestTarget target_b(setup, "//a:b", Target::GROUP);
+  ASSERT_TRUE(target_b.FillOutputFiles(&err));
+  EXPECT_FALSE(target_b.HasRealInputs());
+
+  // A target with no inputs and one dep with real inputs has real inputs.
+  target_b.private_deps().push_back(LabelTargetPair(&target_a));
+  ASSERT_TRUE(target_b.FillOutputFiles(&err));
+  EXPECT_TRUE(target_b.HasRealInputs());
+
+  // A target with one input with no tool, and no deps, has no real inputs.
+  TestTarget target_c(setup, "//a:c", Target::SOURCE_SET);
+  target_c.config_values().inputs().push_back(SourceFile("//a/no_tool.txt"));
+  ASSERT_TRUE(target_c.FillOutputFiles(&err));
+  EXPECT_FALSE(target_c.HasRealInputs());  // One input with no tool, no deps.
+
+  // The same, but with one dep without a dependency output.
+  TestTarget target_d(setup, "//a:c2", Target::GROUP);
+  target_c.private_deps().push_back(LabelTargetPair(&target_d));
+  ASSERT_TRUE(target_c.FillOutputFiles(&err));
+  EXPECT_FALSE(target_c.HasRealInputs());
+
+  // The same, but with one dep with a dependency output.
+  TestTarget target_e(setup, "//a:d", Target::EXECUTABLE);
+  target_e.sources().push_back(SourceFile("//a/source.cc"));
+  ASSERT_TRUE(target_e.FillOutputFiles(&err));
+  EXPECT_TRUE(target_e.HasRealInputs());
+  target_c.private_deps().push_back(LabelTargetPair(&target_e));
+  ASSERT_TRUE(target_c.FillOutputFiles(&err));
+  EXPECT_TRUE(target_c.HasRealInputs());
 }
 
 TEST_F(TargetTest, GeneratedInputs) {

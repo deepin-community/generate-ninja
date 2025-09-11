@@ -210,7 +210,7 @@ Value RunToolchain(Scope* scope,
   // This object will actually be copied into the one owned by the toolchain
   // manager, but that has to be done in the lock.
   std::unique_ptr<Toolchain> toolchain = std::make_unique<Toolchain>(
-      scope->settings(), label, scope->build_dependency_files());
+      scope->settings(), label, scope->CollectBuildDependencyFiles());
   toolchain->set_defined_from(function);
   toolchain->visibility().SetPublic();
 
@@ -563,7 +563,7 @@ Tool variables
         skip writing output if the output file has not changed.
 
         Normally, Ninja will assume that when a tool runs the output be new and
-        downstream dependents must be rebuild. When this is set to trye, Ninja
+        downstream dependents must be rebuild. When this is set to true, Ninja
         can skip rebuilding downstream dependents for input changes that don't
         actually affect the output.
 
@@ -862,8 +862,8 @@ Tool variables
         libraries in this target. Includes any specified renamed dependencies.
 
     {{rustdeps}}
-        Expands to the list of -Ldependency=<path> strings needed to compile
-        this target.
+        Expands to the list of -Ldependency=<path> and -Clink-arg=<path> strings
+        needed to compile this target.
 
     {{rustenv}}
         Expands to the list of environment variables.

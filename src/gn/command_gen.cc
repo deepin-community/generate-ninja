@@ -9,6 +9,7 @@
 #include <unordered_map>
 
 #include "base/command_line.h"
+#include "base/files/file_util.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/stringprintf.h"
 #include "base/timer/elapsed_timer.h"
@@ -109,10 +110,12 @@ void BackgroundDoWrite(TargetWriteInfo* write_info, const Target* target) {
   std::string rule =
       NinjaTargetWriter::RunAndWriteFile(target, resolved, ninja_outputs);
 
-  DCHECK(!rule.empty());
-
   {
     std::lock_guard<std::mutex> lock(write_info->lock);
+    // Even if rule is empty, add it to the map to ensure a corresponding
+    // .toolchain file will be generated, otherwise Ninja will complain
+    // when the build.ninja file tries to load a non-existent .toolchain
+    // file.
     write_info->rules[target->toolchain()].emplace_back(target,
                                                         std::move(rule));
 
@@ -255,7 +258,7 @@ bool RunIdeWriter(const std::string& ide,
   } else if (ide == kSwitchIdeValueVs || ide == kSwitchIdeValueVs2013 ||
              ide == kSwitchIdeValueVs2015 || ide == kSwitchIdeValueVs2017 ||
              ide == kSwitchIdeValueVs2019 || ide == kSwitchIdeValueVs2022) {
-    VisualStudioWriter::Version version = VisualStudioWriter::Version::Vs2019;
+    VisualStudioWriter::Version version = VisualStudioWriter::Version::Vs2022;
     if (ide == kSwitchIdeValueVs2013)
       version = VisualStudioWriter::Version::Vs2013;
     else if (ide == kSwitchIdeValueVs2015)
@@ -488,6 +491,19 @@ bool RunNinjaPostProcessTools(const BuildSettings* build_settings,
   return true;
 }
 
+bool WriteIgnoreFile(Setup& setup, Err* err) {
+  // Write a .gitignore file that causes the build directory to be ignored.
+  base::FilePath output_path =
+      setup.build_settings()
+          .GetFullPath(setup.build_settings().build_dir())
+          .Append(FILE_PATH_LITERAL(".gitignore"));
+
+  if (base::PathExists(output_path))
+    return true;
+
+  return WriteFile(output_path, "# Created by GN\n*\n", err);
+}
+
 }  // namespace
 
 const char kGen[] = "gen";
@@ -533,7 +549,7 @@ IDE options
       Generate files for an IDE. Currently supported values:
       "eclipse" - Eclipse CDT settings file.
       "vs" - Visual Studio project/solution files.
-             (default Visual Studio version: 2019)
+             (default Visual Studio version: 2022)
       "vs2013" - Visual Studio 2013 project/solution files.
       "vs2015" - Visual Studio 2015 project/solution files.
       "vs2017" - Visual Studio 2017 project/solution files.
@@ -760,7 +776,7 @@ int RunGen(const std::vector<std::string>& args) {
   // regeneration can be restarted if interrupted.
   if (command_line->HasSwitch(switches::kRegeneration)) {
     if (!commands::PrepareForRegeneration(&setup->build_settings())) {
-      return false;
+      return 1;
     }
   }
 
@@ -865,6 +881,11 @@ int RunGen(const std::vector<std::string>& args) {
 
   if (command_line->HasSwitch(kSwitchExportRustProject) &&
       !RunRustProjectWriter(&setup->build_settings(), setup->builder(), &err)) {
+    err.PrintToStdout();
+    return 1;
+  }
+
+  if (!WriteIgnoreFile(*setup, &err)) {
     err.PrintToStdout();
     return 1;
   }
